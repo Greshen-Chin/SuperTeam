@@ -1,0 +1,75 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: dark;
+  --app-bg: #08090d;
+  --app-bg-soft: #0b0c12;
+  --app-fg: #ffffff;
+  --app-muted: #a1a1aa;
+  --app-line: rgba(255, 255, 255, 0.1);
+  --app-panel: rgba(255, 255, 255, 0.055);
+  --app-panel-strong: rgba(255, 255, 255, 0.09);
+  --dot-color: rgba(255, 255, 255, 0.16);
+  --accent: #7c3aed;
+  background: var(--app-bg);
+}
+
+[data-theme="light"] {
+  color-scheme: light;
+  --app-bg: #f6f7fb;
+  --app-bg-soft: #ffffff;
+  --app-fg: #101114;
+  --app-muted: #5b6170;
+  --app-line: rgba(15, 23, 42, 0.1);
+  --app-panel: rgba(255, 255, 255, 0.78);
+  --app-panel-strong: rgba(255, 255, 255, 0.94);
+  --dot-color: rgba(15, 23, 42, 0.16);
+  --accent: #2563eb;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  background: var(--app-bg);
+  color: var(--app-fg);
+  transition:
+    background-color 360ms ease,
+    color 360ms ease;
+}
+
+button,
+input,
+textarea {
+  font: inherit;
+}
+
+::selection {
+  background: #6d5dfc;
+  color: #ffffff;
+}
+
+.dot-grid {
+  background-image: radial-gradient(var(--dot-color) 1px, transparent 1px);
+  background-size: 18px 18px;
+}
+
+.glass-panel {
+  background: linear-gradient(180deg, var(--app-panel-strong), var(--app-panel));
+  border: 1px solid var(--app-line);
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.22);
+}
+
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: 420ms;
+  animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+}
