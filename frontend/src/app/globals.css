@@ -46,6 +46,14 @@ body {
     color 360ms ease;
 }
 
+@media (pointer: fine) {
+  .home-cinematic,
+  .home-cinematic a,
+  .home-cinematic button {
+    cursor: none;
+  }
+}
+
 button,
 input,
 textarea {

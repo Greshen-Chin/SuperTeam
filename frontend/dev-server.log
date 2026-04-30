@@ -1,137 +1,27 @@
 
 > vidchain-frontend@0.1.0 dev
-> next dev --hostname 127.0.0.1
+> next dev --hostname 0.0.0.0 --port 3000
 
    ▲ Next.js 15.5.15
-   - Local:        http://127.0.0.1:3000
-   - Network:      http://127.0.0.1:3000
+   - Local:        http://localhost:3000
+   - Network:      http://0.0.0.0:3000
+   - Environments: .env.local
 
  ✓ Starting...
- ✓ Ready in 1721ms
- ○ Compiling /dashboard ...
- ✓ Compiled /dashboard in 7.1s (706 modules)
- GET / 200 in 7549ms
- GET / 200 in 7664ms
- GET /dashboard 200 in 7650ms
- GET / 200 in 85ms
- GET /dashboard 200 in 39ms
- GET / 200 in 16ms
- GET /dashboard 200 in 31ms
- GET / 200 in 28ms
- GET / 200 in 26ms
- GET / 200 in 29ms
- GET / 200 in 22ms
- GET / 200 in 36ms
- ✓ Compiled in 1919ms (715 modules)
- GET / 200 in 76ms
- ✓ Compiled in 1992ms (713 modules)
- GET / 200 in 54ms
- ✓ Compiled in 1478ms (711 modules)
- GET / 200 in 47ms
- ✓ Compiled in 2s (711 modules)
- GET / 200 in 44ms
- ⨯ [Error: ENOENT: no such file or directory, open 'E:\SuperTeam\frontend\.next\routes-manifest.json'] {
-  errno: -4058,
-  code: 'ENOENT',
-  syscall: 'open',
-  path: 'E:\\SuperTeam\\frontend\\.next\\routes-manifest.json',
-  page: '/'
-}
- ○ Compiling /_error ...
- ✓ Compiled /_error in 2.4s (1043 modules)
- ⨯ [Error: ENOENT: no such file or directory, open 'E:\SuperTeam\frontend\.next\routes-manifest.json'] {
-  errno: -4058,
-  code: 'ENOENT',
-  syscall: 'open',
-  path: 'E:\\SuperTeam\\frontend\\.next\\routes-manifest.json',
-  page: '/'
-}
- ⨯ [Error: ENOENT: no such file or directory, open 'E:\SuperTeam\frontend\.next\routes-manifest.json'] {
-  errno: -4058,
-  code: 'ENOENT',
-  syscall: 'open',
-  path: 'E:\\SuperTeam\\frontend\\.next\\routes-manifest.json'
-}
- ⨯ [Error: ENOENT: no such file or directory, open 'E:\SuperTeam\frontend\.next\routes-manifest.json'] {
-  errno: -4058,
-  code: 'ENOENT',
-  syscall: 'open',
-  path: 'E:\\SuperTeam\\frontend\\.next\\routes-manifest.json'
-}
-[Error: ENOENT: no such file or directory, open 'E:\SuperTeam\frontend\.next\routes-manifest.json'] {
-  errno: -4058,
-  code: 'ENOENT',
-  syscall: 'open',
-  path: 'E:\\SuperTeam\\frontend\\.next\\routes-manifest.json',
-  page: '/'
-}
-[Error: ENOENT: no such file or directory, open 'E:\SuperTeam\frontend\.next\routes-manifest.json'] {
-  errno: -4058,
-  code: 'ENOENT',
-  syscall: 'open',
-  path: 'E:\\SuperTeam\\frontend\\.next\\routes-manifest.json',
-  page: '/'
-}
- ⨯ [Error: ENOENT: no such file or directory, open 'E:\SuperTeam\frontend\.next\routes-manifest.json'] {
-  errno: -4058,
-  code: 'ENOENT',
-  syscall: 'open',
-  path: 'E:\\SuperTeam\\frontend\\.next\\routes-manifest.json'
-}
-[Error: ENOENT: no such file or directory, open 'E:\SuperTeam\frontend\.next\routes-manifest.json'] {
-  errno: -4058,
-  code: 'ENOENT',
-  syscall: 'open',
-  path: 'E:\\SuperTeam\\frontend\\.next\\routes-manifest.json'
-}
- GET / 500 in 8980ms
- GET / 500 in 417ms
- GET / 500 in 7331ms
- GET / 500 in 187ms
- ⨯ [Error: ENOENT: no such file or directory, open 'E:\SuperTeam\frontend\.next\routes-manifest.json'] {
-  errno: -4058,
-  code: 'ENOENT',
-  syscall: 'open',
-  path: 'E:\\SuperTeam\\frontend\\.next\\routes-manifest.json'
-}
-[Error: ENOENT: no such file or directory, open 'E:\SuperTeam\frontend\.next\routes-manifest.json'] {
-  errno: -4058,
-  code: 'ENOENT',
-  syscall: 'open',
-  path: 'E:\\SuperTeam\\frontend\\.next\\routes-manifest.json'
-}
-<w> [webpack.cache.PackFileCacheStrategy] Caching failed for pack: Error: ENOENT: no such file or directory, rename 'E:\SuperTeam\frontend\.next\cache\webpack\client-development-fallback\0.pack.gz_' -> 'E:\SuperTeam\frontend\.next\cache\webpack\client-development-fallback\0.pack.gz'
- ⨯ [Error: ENOENT: no such file or directory, open 'E:\SuperTeam\frontend\.next\routes-manifest.json'] {
-  errno: -4058,
-  code: 'ENOENT',
-  syscall: 'open',
-  path: 'E:\\SuperTeam\\frontend\\.next\\routes-manifest.json',
-  page: '/'
-}
- ⨯ [Error: ENOENT: no such file or directory, open 'E:\SuperTeam\frontend\.next\routes-manifest.json'] {
-  errno: -4058,
-  code: 'ENOENT',
-  syscall: 'open',
-  path: 'E:\\SuperTeam\\frontend\\.next\\routes-manifest.json'
-}
-[Error: ENOENT: no such file or directory, open 'E:\SuperTeam\frontend\.next\routes-manifest.json'] {
-  errno: -4058,
-  code: 'ENOENT',
-  syscall: 'open',
-  path: 'E:\\SuperTeam\\frontend\\.next\\routes-manifest.json',
-  page: '/'
-}
- ⨯ [Error: ENOENT: no such file or directory, open 'E:\SuperTeam\frontend\.next\routes-manifest.json'] {
-  errno: -4058,
-  code: 'ENOENT',
-  syscall: 'open',
-  path: 'E:\\SuperTeam\\frontend\\.next\\routes-manifest.json'
-}
-[Error: ENOENT: no such file or directory, open 'E:\SuperTeam\frontend\.next\routes-manifest.json'] {
-  errno: -4058,
-  code: 'ENOENT',
-  syscall: 'open',
-  path: 'E:\\SuperTeam\\frontend\\.next\\routes-manifest.json'
-}
- GET / 500 in 947ms
- GET / 500 in 275ms
+ ✓ Ready in 2.5s
+ ○ Compiling /users ...
+ ✓ Compiled /users in 4.1s (850 modules)
+ GET /users 200 in 4541ms
+ GET /users 200 in 147ms
+ GET /users 200 in 961ms
+ ○ Compiling / ...
+ ✓ Compiled / in 2.2s (874 modules)
+ GET / 200 in 2764ms
+ GET /users 200 in 1252ms
+ ○ Compiling /_not-found ...
+ ✓ Compiled /_not-found in 914ms (865 modules)
+ GET / 404 in 1535ms
+ ✓ Compiled in 4.4s (337 modules)
+ ✓ Compiled in 486ms (337 modules)
+ ✓ Compiled in 3.4s (1259 modules)
+ ✓ Compiled in 922ms (736 modules)

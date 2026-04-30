@@ -11,12 +11,57 @@ export type RegisterProofInput = {
   solanaSignature: string;
 };
 
+type ApiResponse<T> = {
+  success: boolean;
+  data: T | null;
+  error: { code: string; message: string } | null;
+  requestId: string;
+};
+
+const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL;
+
+async function readApiResponse<T>(response: Response): Promise<T> {
+  const payload = (await response.json()) as ApiResponse<T>;
+
+  if (!response.ok || !payload.success || !payload.data) {
+    throw new Error(payload.error?.message ?? "VidChain API request failed.");
+  }
+
+  return payload.data;
+}
+
 export const apiClient = {
-  createFingerprint(file: File) {
+  async createFingerprint(file: File): Promise<Fingerprint> {
+    if (apiBaseUrl) {
+      const formData = new FormData();
+      formData.append("file", file);
+
+      const response = await fetch(`${apiBaseUrl}/api/fingerprints`, {
+        method: "POST",
+        headers: authHeaders(),
+        body: formData
+      });
+
+      return readApiResponse<Fingerprint>(response);
+    }
+
     return createLocalFingerprint(file);
   },
 
   async registerProof(input: RegisterProofInput): Promise<Proof> {
+    if (apiBaseUrl) {
+      const response = await fetch(`${apiBaseUrl}/api/proofs`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...authHeaders()
+        },
+        body: JSON.stringify(input)
+      });
+
+      return readApiResponse<Proof>(response);
+    }
+
     await new Promise((resolve) => setTimeout(resolve, 500));
 
     return {
@@ -33,6 +78,14 @@ export const apiClient = {
   },
 
   async getProof(id: string): Promise<Proof> {
+    if (apiBaseUrl) {
+      const response = await fetch(`${apiBaseUrl}/api/proofs/${id}`, {
+        cache: "no-store"
+      });
+
+      return readApiResponse<Proof>(response);
+    }
+
     await new Promise((resolve) => setTimeout(resolve, 300));
     return {
       ...demoProof,
@@ -41,6 +94,23 @@ export const apiClient = {
   },
 
   async verifyVideo(file: File): Promise<VerificationResult> {
+    if (apiBaseUrl) {
+      const formData = new FormData();
+      formData.append("file", file);
+
+      const response = await fetch(`${apiBaseUrl}/api/proofs/verify`, {
+        method: "POST",
+        headers: authHeaders(),
+        body: formData
+      });
+
+      const result = await readApiResponse<VerificationResult>(response);
+      return {
+        ...result,
+        certificateUrl: result.matchedProofId ? routes.certificate(result.matchedProofId) : null
+      };
+    }
+
     const fingerprint = await createLocalFingerprint(file);
     await new Promise((resolve) => setTimeout(resolve, 700));
 
@@ -60,4 +130,11 @@ export const apiClient = {
     };
   }
 };
+
+function authHeaders(): Record<string, string> {
+  if (typeof window === "undefined") return {};
+
+  const token = window.localStorage.getItem("vidchain_access_token");
+  return token ? { Authorization: `Bearer ${token}` } : {};
+}
 
