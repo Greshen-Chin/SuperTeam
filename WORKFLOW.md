@@ -25,14 +25,21 @@ For setup commands see [README.md](README.md). For testing see [TESTING.md](TEST
 
 ```text
 Creator opens VidChain
-  → connects Phantom wallet (Devnet)
+  → signs in:
+       Path A (default — non-crypto user)
+         · taps "Continue with Google" / "Continue with Email"
+         · Web3Auth creates an embedded Solana wallet (no seed phrase shown)
+         · frontend POSTs /api/airdrop → server funds wallet with 0.05 devnet SOL
+       Path B (power user)
+         · taps "Connect Phantom" → standard wallet adapter modal
   → uploads original video (drag-drop or click)
   → app generates SHA-256 + pHash IN THE BROWSER (no server upload yet)
   → app shows fingerprint preview + duration
   → creator fills title (required) + handle (optional) + license fee (optional)
   → creator clicks "Register"
   → app uploads file to IPFS via NFT.Storage and gets CID
-  → app builds register_proof tx and asks wallet to sign
+  → app builds register_proof tx, calls useVidchainWallet().signTransaction(tx)
+       (Web3Auth signs silently in the popup OR Phantom shows its prompt)
   → tx confirmed on Solana Devnet (~400 ms)
   → backend stores proof metadata indexed by sha256, fingerprintRoot, creatorWallet
   → app displays Certificate URL: /certificate/<proof_id>
@@ -51,6 +58,9 @@ Creator opens VidChain
 |---|---|
 | File too large (>200 MB) | Reject before fingerprinting; show size limit |
 | Browser missing crypto.subtle / Canvas | Show "browser not supported" with list |
+| Web3Auth modal closed before login | Stay on sign-in screen; no error toast |
+| Web3Auth popup blocked | Show inline note: "Allow popups for this site" + retry button |
+| Devnet airdrop rate-limited | Silent retry once, then proceed (PDA rent is the only forced cost; user can also fund manually) |
 | IPFS upload timeout | Retry once, then show error with manual retry button |
 | Wallet rejects signature | Return to "ready_to_sign" state, no error toast |
 | RPC timeout after sign | Poll signature status for 30 s, then show "check Explorer" |
@@ -327,11 +337,12 @@ The demo wins or loses the round. Rehearse it five times.
 
 ### Minute 1 — Register & Prove
 
-1. Open VidChain. Click **Connect Wallet**. Phantom modal → approve.
+1. Open VidChain. Click **Continue with Google** → standard Google consent screen → approved.
+   *"No wallet to install. No 12-word phrase. The creator just signs in with the account they already use for TikTok."*
 2. Click **Register Video** → drop `original.mp4`.
 3. Narrate while UI shows fingerprint progress: *"VidChain is computing two hashes locally — SHA-256 for an exact match, and a perceptual hash that survives re-encoding."*
-4. Type title → click **Register** → approve in Phantom.
-5. Tx confirms in <1 s. Click the Solana Explorer link. *"Permanent. Public. Indonesian creators have never had this."*
+4. Type title → click **Register**. Web3Auth signs silently in a popup.
+5. Tx confirms in <1 s. Click the Solana Explorer link. *"Permanent. Public. Indonesian creators have never had this — and they never had to learn about wallets."*
 
 ### Minute 2 — Verify & Catch the Repost
 
@@ -343,10 +354,10 @@ The demo wins or loses the round. Rehearse it five times.
 
 ### Minute 3 — License & Earn (or alt: Dispute)
 
-1. On the buyer laptop, open the same certificate. Show **License: 0.5 SOL**.
+1. On the buyer laptop, open the same certificate. Show **License: 0.5 SOL**. Buyer is signed in via **Connect Phantom** to highlight that VidChain works for both audiences.
 2. Click **License this video** → approve in Phantom.
-3. Switch to creator laptop — Phantom updates in <1 s. *"No bank, no PayPal, no 30-day wait. The contract is the middleman."*
-4. Closing: *"VidChain is the first platform where Indonesian creators can prove ownership, earn from licensing, and hold thieves accountable — all on Solana, all in real time."*
+3. Switch to creator laptop — the embedded Web3Auth wallet balance updates in <1 s. *"No bank, no PayPal, no 30-day wait. The contract is the middleman."*
+4. Closing: *"VidChain is the first platform where Indonesian creators can sign in with Google, prove ownership, earn from licensing, and hold thieves accountable — all on Solana, all in real time."*
 
 ---
 

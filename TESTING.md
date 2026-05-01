@@ -455,36 +455,129 @@ ffmpeg -ss 3 -i fixtures/demo/original.mp4 -c copy fixtures/demo/original-trimme
 
 ---
 
-## Mocking the Wallet
+## Mocking the Wallet (and Web3Auth)
 
-Production e2e mode uses `NEXT_PUBLIC_USE_MOCK_CHAIN=true` so no real wallet is needed. For specs that exercise the *Wallet Adapter* itself, inject a fake wallet:
+E2E tests **never** open the real Web3Auth modal — it triggers Google's OAuth popup, which Playwright cannot complete deterministically across runs. Instead, we mock both wallet sources at the `useVidchainWallet()` boundary.
+
+### Strategy
+
+The frontend reads `NEXT_PUBLIC_USE_MOCK_CHAIN`. When it is `true`:
+
+- `useVidchainWallet()` returns a **deterministic fake wallet** with a fixed public key.
+- `loginWithGoogle()` resolves immediately, no popup.
+- `signTransaction()` returns the unsigned tx (the mock blockchain adapter does not actually submit).
+
+This is implemented once in `frontend/src/lib/use-vidchain-wallet.ts`:
+
+```ts
+// excerpt
+import { env } from "@/lib/env";
+import { mockWallet } from "@/lib/demo-data";
+
+export function useVidchainWallet(): VidchainWallet {
+  if (env.NEXT_PUBLIC_USE_MOCK_CHAIN) return mockWallet;
+  // ...real implementation
+}
+```
+
+```ts
+// src/lib/demo-data.ts
+import { PublicKey } from "@solana/web3.js";
+
+const FAKE_PUBKEY = new PublicKey("VcHn9E2NmF3uP8KoLq21xProofCreatorWalletSolana");
+
+export const mockWallet: VidchainWallet = {
+  publicKey: FAKE_PUBKEY,
+  source: "web3auth",
+  connected: true,
+  connecting: false,
+  loginWithGoogle:        async () => {},
+  loginWithEmail:         async () => {},
+  connectAdapterWallet:   async () => {},
+  signTransaction:  async (tx) => tx,
+  signMessage:      async () => new Uint8Array(64),
+  disconnect:       async () => {},
+};
+```
+
+### Playwright config
+
+`playwright.config.ts` already sets `NEXT_PUBLIC_USE_MOCK_CHAIN=true` for the `webServer` env. That alone is enough — your specs can write:
+
+```ts
+test("creator registers via Google login (mocked)", async ({ page }) => {
+  await page.goto("/register");
+  // wallet is auto-connected because mockWallet.connected === true
+  await page.setInputFiles('[data-testid="video-input"]', fixture("original.mp4"));
+  await page.fill('[data-testid="title-input"]', "Demo");
+  await page.click('[data-testid="register-submit"]');
+  await page.waitForURL(/\/certificate\//);
+});
+```
+
+### When you actually want to test the sign-in UI
+
+To test that the `<SignInTabs />` renders and the buttons respond, set `NEXT_PUBLIC_USE_MOCK_CHAIN=true` but use a **second mock variant** that reports `connected: false` until a button is clicked:
+
+```ts
+// src/lib/demo-data.ts (variant)
+export function makeUnconnectedMockWallet(): VidchainWallet {
+  let connected = false;
+  return {
+    ...mockWallet,
+    get connected() { return connected; },
+    loginWithGoogle: async () => { connected = true; },
+    loginWithEmail:  async () => { connected = true; },
+  };
+}
+```
+
+Toggle which variant `useVidchainWallet()` returns based on a query string flag, e.g. `?mockWalletState=disconnected`.
+
+### Power-user path: real adapter wallet (Phantom) in Playwright
+
+If you want one spec exercising the actual `@solana/wallet-adapter-react` flow (no Web3Auth involved), inject a fake `window.solana` shim **before** the page loads. This works for the wallet-adapter path because it reads `window.solana`:
 
 ```ts
 // frontend/tests/e2e/fixtures/wallet.ts
 import type { Page } from "@playwright/test";
 
-export async function injectFakeWallet(page: Page, publicKeyBase58: string) {
+export async function injectFakePhantom(page: Page, publicKeyBase58: string) {
   await page.addInitScript((pk) => {
     (window as any).solana = {
       isPhantom: true,
       publicKey: { toBase58: () => pk, toBuffer: () => new Uint8Array(32) },
       isConnected: true,
-      connect:  async () => ({ publicKey: { toBase58: () => pk } }),
-      signTransaction: async (tx: any) => tx,
-      signAllTransactions: async (txs: any[]) => txs,
-      signMessage: async (msg: Uint8Array) => ({ signature: new Uint8Array(64), publicKey: { toBase58: () => pk } }),
+      connect: async () => ({ publicKey: { toBase58: () => pk } }),
+      signTransaction:     async (tx: unknown) => tx,
+      signAllTransactions: async (txs: unknown[]) => txs,
+      signMessage:         async () => ({ signature: new Uint8Array(64), publicKey: { toBase58: () => pk } }),
+      disconnect:          async () => {},
+      on:                  () => {},
+      off:                 () => {},
     };
   }, publicKeyBase58);
 }
 ```
 
-Use it:
-
 ```ts
 test.beforeEach(async ({ page }) => {
-  await injectFakeWallet(page, "VcHn9E2NmF3uP8KoLq21xProofCreatorWalletSolana");
+  await injectFakePhantom(page, "VcHn9E2NmF3uP8KoLq21xProofCreatorWalletSolana");
+});
+
+test("power user can connect Phantom", async ({ page }) => {
+  await page.goto("/register");
+  await page.click('[data-testid="signin-wallet"]');     // WalletMultiButton
+  await page.click('text=Phantom');                       // wallet modal entry
+  await expect(page.getByTestId("connected-pubkey")).toBeVisible();
 });
 ```
+
+### What you do NOT mock
+
+- The Anchor program or RPC at the network level — `NEXT_PUBLIC_USE_MOCK_CHAIN=true` already short-circuits these in the blockchain adapter.
+- The `useVidchainWallet` hook itself in unit tests — `vi.mock("@/lib/use-vidchain-wallet")` is the right level.
+- The Web3Auth modal package — `NEXT_PUBLIC_USE_MOCK_CHAIN=true` makes `useVidchainWallet` return `mockWallet` before any Web3Auth code runs, so the package never initializes.
 
 ---
 
@@ -568,6 +661,8 @@ Hard checklist before submission:
 | Unit | `apiClient.registerProof` parses response | frontend |
 | Integration | `POST /api/proofs` validates body | backend |
 | Integration | `POST /api/proofs/verify` returns visual match for re-encoded | backend |
+| E2E | Sign-in tabs render Google + Email + Phantom buttons | frontend |
+| E2E | Tap "Continue with Google" → wallet connected (mocked Web3Auth) | frontend |
 | E2E | Register original → certificate URL | frontend |
 | E2E | Verify re-encoded → "Likely Match Found" | frontend |
 | E2E | Verify unrelated → "No Registered Origin Found" | frontend |

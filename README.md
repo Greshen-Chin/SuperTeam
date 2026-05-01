@@ -8,6 +8,14 @@ VidChain gives Indonesian short-form video creators a permanent, tamper-proof, p
 
 ---
 
+## 🤖 Building this with an AI agent?
+
+**Read [`AGENTS.md`](AGENTS.md) first.** It is the deterministic 8-phase build playbook (foundation → fingerprinting → frontend → blockchain → backend → Web3Auth → tests → deploy) with exact files, commands, acceptance tests, and hard "DO NOT" rules. Every other doc in this repo is referenced from there in the right order.
+
+A human reading top-to-bottom is fine too — the rest of this README is for you.
+
+---
+
 ## Table of Contents
 
 1. [Problem & Solution](#problem--solution)
@@ -32,6 +40,7 @@ Indonesian creators lose attribution every day — viral TikTok dances, YouTube 
 
 **VidChain solution:**
 
+- Onboard creators with **one-tap social login** (Google, email, Apple, Discord) via Web3Auth — a real Solana wallet is created behind the scenes; the user never sees a seed phrase. Power users can still **Connect Phantom** instead.
 - Generate a **dual fingerprint** of the video locally in the browser:
   - SHA-256 (exact file match — instant)
   - pHash perceptual hash (survives re-encoding, compression, resolution change)
@@ -46,6 +55,7 @@ Indonesian creators lose attribution every day — viral TikTok dances, YouTube 
 ## Core User Flows
 
 ```text
+Onboard      "Continue with Google" (Web3Auth → embedded Solana wallet)  OR  "Connect Phantom"
 Creator      Upload → Hash (SHA-256 + pHash) → IPFS upload → Sign tx → Mint NFT → Certificate URL
 Verifier     Upload → Hash (SHA-256 + pHash) → SHA-256 check → pHash search → Result + certificate
 Buyer        View certificate → Click "License" → Sign tx → SOL routed atomically → License Token in wallet
@@ -213,7 +223,8 @@ packages:
 | Frontend framework | Next.js 15 (App Router) | SSR, file-based routing, edge-friendly, easy Vercel deploy |
 | UI lib | React 19 + TypeScript | Standard component model, strict typing |
 | Styling | Tailwind CSS 3 | Speed of iteration, consistent design tokens |
-| Wallet | `@solana/wallet-adapter-react` + Phantom | Largest Solana wallet, supports Devnet |
+| Wallet (power user) | `@solana/wallet-adapter-react` + Phantom | Largest Solana wallet, supports Devnet |
+| Social login → wallet | **Web3Auth** (`@web3auth/modal` + `@web3auth/solana-provider`) | Google/email/Apple login → MPC-derived Solana wallet, no seed phrase. Removes the #1 onboarding barrier for non-crypto creators. |
 | Blockchain client | `@solana/web3.js` + `@coral-xyz/anchor` | Anchor TS client for typed program calls |
 | Smart contract | Anchor (Rust) | De-facto Solana framework, fast iteration |
 | NFT standard | Metaplex `@metaplex-foundation/mpl-token-metadata` | Standard NFT metadata schema |
@@ -246,7 +257,8 @@ packages:
 | Solana CLI | 1.18+ | `sh -c "$(curl -sSfL https://release.solana.com/stable/install)"` |
 | Anchor | 0.30+ | `cargo install --git https://github.com/coral-xyz/anchor avm --locked && avm install latest && avm use latest` |
 | Supabase CLI | latest | `brew install supabase/tap/supabase` (optional, for local Postgres) |
-| Phantom wallet | latest | https://phantom.app — switch to **Devnet** in settings |
+| Phantom wallet | latest | https://phantom.app — switch to **Devnet** in settings (optional: only needed to test the "power user" path; Web3Auth covers the default path) |
+| Web3Auth dashboard | account | https://dashboard.web3auth.io — create a project (Sapphire Devnet), copy the Client ID into `NEXT_PUBLIC_WEB3AUTH_CLIENT_ID` |
 
 ### One-time setup
 
@@ -307,6 +319,8 @@ NEXT_PUBLIC_APP_URL=http://localhost:3000
 NEXT_PUBLIC_SOLANA_CLUSTER=devnet
 NEXT_PUBLIC_SOLANA_RPC_URL=https://api.devnet.solana.com
 NEXT_PUBLIC_VIDCHAIN_PROGRAM_ID=                       # fill after anchor deploy
+NEXT_PUBLIC_WEB3AUTH_CLIENT_ID=                        # from https://dashboard.web3auth.io
+NEXT_PUBLIC_WEB3AUTH_NETWORK=sapphire_devnet           # sapphire_devnet | sapphire_mainnet
 NEXT_PUBLIC_USE_MOCK_CHAIN=false                       # true = skip real on-chain tx
 NEXT_PUBLIC_USE_MOCK_API=false                         # true = use in-memory api-client mocks
 
@@ -454,6 +468,7 @@ Each workstream has detailed, implementation-ready instructions:
 
 Cross-cutting docs:
 
+- **[AGENTS.md](AGENTS.md)** — 🤖 deterministic AI-agent build playbook (read first if using Claude/Sonnet to implement)
 - **[WORKFLOW.md](WORKFLOW.md)** — product, technical, team workflow, demo plan
 - **[TESTING.md](TESTING.md)** — Vitest + Playwright + Anchor testing
 - **[DEPLOYMENT.md](DEPLOYMENT.md)** — Vercel + Devnet deployment
