@@ -1,13 +1,21 @@
 import pg from "pg";
 import { config } from "./config.js";
 
-export const pool = new pg.Pool({
-  connectionString: config.databaseUrl,
-  ssl: { rejectUnauthorized: false }
-});
+export const pool: pg.Pool | null = config.databaseUrl
+  ? new pg.Pool({ connectionString: config.databaseUrl, ssl: { rejectUnauthorized: false } })
+  : null;
+
+export function requirePool(): pg.Pool {
+  if (!pool) {
+    const err = new Error("DATABASE_URL is not configured.") as Error & { code: string };
+    err.code = "ENOTFOUND";
+    throw err;
+  }
+  return pool;
+}
 
 export async function migrate() {
-  await pool.query(`
+  await requirePool().query(`
     create table if not exists users (
       id text primary key,
       email text unique,

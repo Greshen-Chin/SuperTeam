@@ -1,6 +1,7 @@
 import type { Pool } from "pg";
 import type { VerificationResult } from "../schemas.js";
 
+
 type CreateVerificationInput = VerificationResult & {
   id: string;
   uploadedSha256: string;

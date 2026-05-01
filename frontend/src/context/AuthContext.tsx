@@ -28,11 +28,7 @@ type AuthContextValue = {
 const AuthContext = createContext<AuthContextValue | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const googleClientId = getGoogleClientId();
-
-  if (!googleClientId) {
-    return <AuthStateProvider>{children}</AuthStateProvider>;
-  }
+  const googleClientId = getGoogleClientId() || "placeholder-not-configured";
 
   return (
     <GoogleOAuthProvider clientId={googleClientId}>

@@ -1,12 +1,12 @@
 import type { FastifyInstance, FastifyRequest } from "fastify";
 import { z } from "zod";
-import { pool } from "../db.js";
+import { requirePool } from "../db.js";
 import { makeId } from "../fingerprint.js";
 import { fail, ok } from "../response.js";
 import { createAuthRepository } from "../repositories/auth-repository.js";
 import { createNonce, hashPassword, signAccessToken, verifyAccessToken, verifyGoogleToken, verifyPassword, verifyWalletSignature } from "../auth.js";
 
-const authRepository = createAuthRepository(pool);
+const getAuthRepo = () => createAuthRepository(requirePool());
 
 const googleLoginSchema = z.object({
   token: z.string().min(1)
@@ -32,7 +32,7 @@ export async function registerAuthRoutes(app: FastifyInstance) {
 
     try {
       const payload = verifyAccessToken(auth);
-      const user = await authRepository.findById(String(payload.sub));
+      const user = await getAuthRepo().findById(String(payload.sub));
       if (!user) {
         return fail(reply, request, 404, "USER_NOT_FOUND", "User was not found.");
       }
@@ -51,7 +51,7 @@ export async function registerAuthRoutes(app: FastifyInstance) {
 
     try {
       verifyAccessToken(auth);
-      const users = await authRepository.listUsers();
+      const users = await getAuthRepo().listUsers();
       return ok(request, { users });
     } catch (error) {
       return handleAuthError(reply, request, error, "AUTH_INVALID", "Bearer token is invalid or expired.");
@@ -65,12 +65,12 @@ export async function registerAuthRoutes(app: FastifyInstance) {
     }
 
     try {
-      const existing = await authRepository.findByEmail(parsed.data.email);
+      const existing = await getAuthRepo().findByEmail(parsed.data.email);
       if (existing) {
         return fail(reply, request, 409, "EMAIL_ALREADY_REGISTERED", "This email is already registered.");
       }
 
-      const user = await authRepository.createPasswordUser({
+      const user = await getAuthRepo().createPasswordUser({
         id: makeId("user"),
         email: parsed.data.email,
         passwordHash: await hashPassword(parsed.data.password)
@@ -89,7 +89,7 @@ export async function registerAuthRoutes(app: FastifyInstance) {
     }
 
     try {
-      const user = await authRepository.findByEmail(parsed.data.email);
+      const user = await getAuthRepo().findByEmail(parsed.data.email);
       if (!user?.passwordHash || !(await verifyPassword(parsed.data.password, user.passwordHash))) {
         return fail(reply, request, 401, "INVALID_CREDENTIALS", "Email or password is incorrect.");
       }
@@ -108,7 +108,7 @@ export async function registerAuthRoutes(app: FastifyInstance) {
 
     try {
       const googleUser = await verifyGoogleToken(parsed.data.token);
-      const user = await authRepository.upsertGoogleUser({
+      const user = await getAuthRepo().upsertGoogleUser({
         id: makeId("user"),
         email: googleUser.email,
         googleSub: googleUser.sub
@@ -134,7 +134,7 @@ export async function registerAuthRoutes(app: FastifyInstance) {
     try {
       const payload = verifyAccessToken(auth);
       const googleUser = await verifyGoogleToken(parsed.data.token);
-      const user = await authRepository.linkGoogle({
+      const user = await getAuthRepo().linkGoogle({
         userId: String(payload.sub),
         email: googleUser.email,
         googleSub: googleUser.sub
@@ -154,7 +154,7 @@ export async function registerAuthRoutes(app: FastifyInstance) {
 
     try {
       const nonce = createNonce();
-      await authRepository.saveNonce({
+      await getAuthRepo().saveNonce({
         address,
         nonce,
         expiredAt: new Date(Date.now() + 5 * 60 * 1000)
@@ -173,7 +173,7 @@ export async function registerAuthRoutes(app: FastifyInstance) {
     }
 
     try {
-      const validNonce = await authRepository.consumeNonce(parsed.data);
+      const validNonce = await getAuthRepo().consumeNonce(parsed.data);
       if (!validNonce) {
         return fail(reply, request, 401, "NONCE_INVALID", "Nonce is invalid, expired, or already used.");
       }
@@ -182,7 +182,7 @@ export async function registerAuthRoutes(app: FastifyInstance) {
         return fail(reply, request, 401, "SIGNATURE_INVALID", "Wallet signature is invalid.");
       }
 
-      const user = await authRepository.upsertWalletUser({
+      const user = await getAuthRepo().upsertWalletUser({
         id: makeId("user"),
         walletAddress: parsed.data.address
       });
@@ -206,7 +206,7 @@ export async function registerAuthRoutes(app: FastifyInstance) {
 
     try {
       const payload = verifyAccessToken(auth);
-      const validNonce = await authRepository.consumeNonce(parsed.data);
+      const validNonce = await getAuthRepo().consumeNonce(parsed.data);
       if (!validNonce) {
         return fail(reply, request, 401, "NONCE_INVALID", "Nonce is invalid, expired, or already used.");
       }
@@ -215,7 +215,7 @@ export async function registerAuthRoutes(app: FastifyInstance) {
         return fail(reply, request, 401, "SIGNATURE_INVALID", "Wallet signature is invalid.");
       }
 
-      const user = await authRepository.linkWallet({
+      const user = await getAuthRepo().linkWallet({
         userId: String(payload.sub),
         walletAddress: parsed.data.address
       });

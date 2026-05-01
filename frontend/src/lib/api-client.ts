@@ -32,19 +32,6 @@ async function readApiResponse<T>(response: Response): Promise<T> {
 
 export const apiClient = {
   async createFingerprint(file: File): Promise<Fingerprint> {
-    if (apiBaseUrl) {
-      const formData = new FormData();
-      formData.append("file", file);
-
-      const response = await fetch(`${apiBaseUrl}/api/fingerprints`, {
-        method: "POST",
-        headers: authHeaders(),
-        body: formData
-      });
-
-      return readApiResponse<Fingerprint>(response);
-    }
-
     return createLocalFingerprint(file);
   },
 
@@ -95,13 +82,12 @@ export const apiClient = {
 
   async verifyVideo(file: File): Promise<VerificationResult> {
     if (apiBaseUrl) {
-      const formData = new FormData();
-      formData.append("file", file);
+      const fingerprint = await createLocalFingerprint(file);
 
       const response = await fetch(`${apiBaseUrl}/api/proofs/verify`, {
         method: "POST",
-        headers: authHeaders(),
-        body: formData
+        headers: { "Content-Type": "application/json", ...authHeaders() },
+        body: JSON.stringify({ fingerprint })
       });
 
       const result = await readApiResponse<VerificationResult>(response);
