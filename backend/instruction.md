@@ -67,19 +67,19 @@ Switch to Fastify post-hackathon if any of these become true: cold-start RPS > 2
 
 ```bash
 cd frontend
-pnpm install
+npm install
 cp .env.example .env.local
 # fill: DATABASE_URL, SUPABASE_SERVICE_ROLE_KEY, NFT_STORAGE_API_KEY
 
 # Add backend deps
-pnpm add prisma @prisma/client pino pino-pretty
-pnpm add -D vitest @vitest/coverage-v8 supertest msw
+npm install prisma @prisma/client pino pino-pretty
+npm install --save-dev vitest @vitest/coverage-v8 supertest msw
 
 # Initialize Prisma
-pnpm exec prisma init
+npx prisma init
 # edit prisma/schema.prisma (see below) then:
-pnpm exec prisma migrate dev --name init
-pnpm exec prisma generate
+npx prisma migrate dev --name init
+npx prisma generate
 ```
 
 ### Local PostgreSQL options
@@ -163,8 +163,8 @@ enum MatchType {
 Apply migrations:
 
 ```bash
-pnpm exec prisma migrate dev --name init       # local
-pnpm exec prisma migrate deploy                 # CI/prod
+npx prisma migrate dev --name init             # local
+npx prisma migrate deploy                       # CI/prod
 ```
 
 ### Indexing strategy for pHash search
@@ -443,7 +443,7 @@ See **[TESTING.md](../TESTING.md)** for the full guide. Backend specifics:
 
 ```bash
 # Run only backend tests
-pnpm test src/server
+npm test -- src/server
 ```
 
 ---

@@ -177,42 +177,40 @@ SuperTeam/
         └── index.ts
 ```
 
-> The repo is structured to be **monorepo-ready** with `pnpm` workspaces. See [Monorepo Setup](#monorepo-setup) below. For hackathon speed you may keep `frontend/` self-contained and skip workspaces — the per-folder `instruction.md` files are valid either way.
+> The repo is structured to be **monorepo-ready** with `npm` workspaces (Node 20 / npm 10+). See [Monorepo Setup](#monorepo-setup) below. For hackathon speed you may keep `frontend/` self-contained and skip workspaces — the per-folder `instruction.md` files are valid either way.
 
 ### Monorepo Setup (recommended)
 
-Add a root `package.json`:
+Add a root `package.json` with the `workspaces` array — npm reads it directly, no separate config file needed:
 
 ```json
 {
   "name": "vidchain",
   "private": true,
-  "packageManager": "pnpm@9.12.0",
-  "workspaces": ["frontend", "backend", "fingerprinting", "bot", "shared"],
+  "packageManager": "npm@10.9.0",
+  "engines": { "node": ">=20" },
+  "workspaces": [
+    "frontend",
+    "backend",
+    "fingerprinting",
+    "bot",
+    "shared"
+  ],
   "scripts": {
-    "dev":        "pnpm --filter frontend dev",
-    "build":      "pnpm -r build",
-    "lint":       "pnpm -r lint",
-    "typecheck":  "pnpm -r typecheck",
-    "test":       "pnpm -r test",
-    "test:e2e":   "pnpm --filter frontend test:e2e",
-    "anchor:build": "cd blockchain && anchor build",
-    "anchor:test":  "cd blockchain && anchor test",
-    "anchor:deploy":"cd blockchain && anchor deploy --provider.cluster devnet"
+    "dev":           "npm run dev --workspace=frontend",
+    "build":         "npm run build --workspaces --if-present",
+    "lint":          "npm run lint --workspaces --if-present",
+    "typecheck":     "npm run typecheck --workspaces --if-present",
+    "test":          "npm test --workspaces --if-present",
+    "test:e2e":      "npm run test:e2e --workspace=frontend",
+    "anchor:build":  "cd blockchain && anchor build",
+    "anchor:test":   "cd blockchain && anchor test",
+    "anchor:deploy": "cd blockchain && anchor deploy --provider.cluster devnet"
   }
 }
 ```
 
-Add `pnpm-workspace.yaml`:
-
-```yaml
-packages:
-  - "frontend"
-  - "backend"
-  - "fingerprinting"
-  - "bot"
-  - "shared"
-```
+> npm workspaces are declared inline in `package.json`. There is **no** `pnpm-workspace.yaml`. The `--if-present` flag lets workspaces without that script be skipped silently.
 
 ---
 
@@ -252,7 +250,7 @@ packages:
 | Tool | Version | Install |
 |---|---|---|
 | Node.js | 20 LTS | https://nodejs.org or `nvm install 20` |
-| pnpm | 9+ | `npm install -g pnpm` |
+| npm | 10+ (ships with Node 20) | comes with Node, no separate install needed |
 | Rust toolchain | stable | `curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs \| sh` |
 | Solana CLI | 1.18+ | `sh -c "$(curl -sSfL https://release.solana.com/stable/install)"` |
 | Anchor | 0.30+ | `cargo install --git https://github.com/coral-xyz/anchor avm --locked && avm install latest && avm use latest` |
@@ -267,8 +265,8 @@ packages:
 git clone <repo-url>
 cd SuperTeam
 
-# 2. Install JS deps (after monorepo root package.json + pnpm-workspace.yaml are added)
-pnpm install
+# 2. Install JS deps (after the monorepo root package.json with "workspaces" is in place)
+npm install
 
 # 3. Copy env templates
 cp .env.example .env.local
@@ -291,7 +289,7 @@ anchor build && anchor deploy --provider.cluster devnet     # rebuild with corre
 cd ..
 
 # 6. Start the dev server
-pnpm dev   # http://localhost:3000
+npm run dev   # http://localhost:3000
 ```
 
 ### Hackathon "fast lane" (skip blockchain temporarily)
@@ -354,14 +352,14 @@ BACKEND_API_URL=http://localhost:3000/api
 See [WORKFLOW.md](WORKFLOW.md) for the day-by-day team plan and product flow. Day-to-day commands:
 
 ```bash
-pnpm dev                  # start frontend dev server (http://localhost:3000)
-pnpm lint                 # run ESLint across all packages
-pnpm typecheck            # run tsc --noEmit across all packages
-pnpm test                 # run all unit tests (Vitest)
-pnpm test:e2e             # run Playwright e2e tests against built app
-pnpm anchor:build         # build Solana program
-pnpm anchor:test          # run Anchor tests against local validator
-pnpm anchor:deploy        # deploy to Devnet (requires funded keypair)
+npm run dev               # start frontend dev server (http://localhost:3000)
+npm run lint              # run ESLint across all packages
+npm run typecheck         # run tsc --noEmit across all packages
+npm test                  # run all unit tests (Vitest)
+npm run test:e2e          # run Playwright e2e tests against built app
+npm run anchor:build      # build Solana program
+npm run anchor:test       # run Anchor tests against local validator
+npm run anchor:deploy     # deploy to Devnet (requires funded keypair)
 ```
 
 ### Branch & commit convention
@@ -386,9 +384,9 @@ VidChain uses a three-layer test pyramid:
 Quick run:
 
 ```bash
-pnpm test            # unit + integration
-pnpm test:e2e        # e2e (auto-starts dev server)
-pnpm anchor:test     # Anchor program tests against `solana-test-validator`
+npm test             # unit + integration
+npm run test:e2e     # e2e (auto-starts dev server)
+npm run anchor:test  # Anchor program tests against `solana-test-validator`
 ```
 
 Read **[TESTING.md](TESTING.md)** for the complete testing guide, including:
@@ -480,14 +478,14 @@ Cross-cutting docs:
 
 VidChain MVP is **submission-ready** when all of the following are true:
 
-- [ ] `pnpm install && pnpm dev` works from a clean clone in under 5 minutes
+- [ ] `npm install && npm run dev` works from a clean clone in under 5 minutes
 - [ ] User can register an original video and get a Devnet transaction signature
 - [ ] Certificate page is publicly accessible and shows a valid Solana Explorer link
 - [ ] Re-encoded copy of the original returns a `visual` match with confidence ≥ 0.85
 - [ ] Unrelated video returns `none` with confidence < 0.65
-- [ ] All Vitest tests pass (`pnpm test`)
+- [ ] All Vitest tests pass (`npm test`)
 - [ ] Playwright e2e covers register → verify → certificate happy path
-- [ ] Anchor program tests pass (`pnpm anchor:test`)
+- [ ] Anchor program tests pass (`npm run anchor:test`)
 - [ ] Deployed to Vercel with a public HTTPS URL
 - [ ] 3-minute demo recording + pitch deck checked into `docs/`
 - [ ] GitHub repo is public, README renders, `.env.example` is complete

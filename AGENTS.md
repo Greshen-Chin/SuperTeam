@@ -20,7 +20,7 @@ If a phase fails its acceptance test, **stop, fix it, then continue**. Do not pr
 
 These prevent the most common AI agent failure modes. Violating any of them invalidates the build.
 
-1. **No invented dependencies.** Every `pnpm add` call must use a package listed in the workstream `instruction.md`. If you think you need a new package, stop and ask the user.
+1. **No invented dependencies.** Every `npm install` call must use a package listed in the workstream `instruction.md`. If you think you need a new package, stop and ask the user.
 2. **No invented APIs.** Use only the Zod schemas and function signatures defined in `shared/instruction.md` and the workstream docs. If you need a new field, add it to `shared/src/schemas.ts` first and update every consumer in the same edit.
 3. **No `any` and no `as` casts** outside narrowing parsed `unknown` values. Strict TypeScript is enforced.
 4. **No placeholders left in code.** No `// TODO: implement later`, no `throw new Error("not implemented")`, no `return null as any`. If you cannot finish a function in this phase, stop and ask.
@@ -72,32 +72,32 @@ Each phase below has:
 
 ```
 SuperTeam/
-├── package.json                   # root, with pnpm workspaces script
-├── pnpm-workspace.yaml
+├── package.json                   # root, with npm workspaces array
 ├── .nvmrc                         # contents: 20
 ├── .editorconfig                  # standard 2-space indent
 └── .github/workflows/ci.yml       # see TESTING.md "CI Pipeline"
 ```
 
-Use the exact `package.json` and `pnpm-workspace.yaml` content from [`README.md` → Monorepo Setup](README.md#monorepo-setup).
+Use the exact root `package.json` content from [Appendix D](#d-root-packagejson) below. **npm workspaces are configured in `package.json` itself** — there is no separate workspace file (unlike pnpm).
 
 **Commands.**
 
 ```bash
-pnpm install
+npm install
 node --version       # must print v20.x
-pnpm --version       # must print 9.x
+npm --version        # must print 10.x or 11.x
 ```
 
 **Acceptance test.**
 
-- `pnpm install` exits 0.
-- `pnpm -r typecheck` runs (it will succeed trivially since packages are still empty stubs).
+- `npm install` exits 0.
+- `npm run typecheck --workspaces --if-present` runs (it will succeed trivially since packages are still empty stubs).
 
 **Common pitfalls.**
 
-- Forgetting `"packageManager": "pnpm@9.x"` in root `package.json` → CI uses npm by accident.
-- Adding workspaces both in `package.json` and `pnpm-workspace.yaml`. Use only `pnpm-workspace.yaml`.
+- Forgetting `"packageManager": "npm@10.x"` in root `package.json` → CI may pick the wrong npm version.
+- Forgetting the `"workspaces": [...]` array in root `package.json` → workspaces don't link.
+- Using `pnpm` commands by accident — this project standardizes on **npm only**.
 
 ---
 
@@ -130,16 +130,16 @@ shared/
 
 ```bash
 cd shared
-pnpm add zod
-pnpm add -D typescript vitest
-pnpm test
-pnpm typecheck
+npm install zod
+npm install --save-dev typescript vitest
+npm test
+npm run typecheck
 ```
 
 **Acceptance test.**
 
-- `pnpm test` shows ≥ 2 passing specs (round-trip parse, regex rejection).
-- `pnpm typecheck` exits 0.
+- `npm test` shows ≥ 2 passing specs (round-trip parse, regex rejection).
+- `npm run typecheck` exits 0.
 - Importing `proofSchema, type Proof` from `@vidchain/shared` works in a sibling package (verify with a one-line import in `frontend/src/shared/schemas.ts` replaced by `export * from "@vidchain/shared"`).
 
 **Common pitfalls.**
@@ -183,9 +183,9 @@ fingerprinting/
 
 ```bash
 cd fingerprinting
-pnpm add blockhash-js
-pnpm add -D typescript vitest @vitest/coverage-v8
-pnpm test
+npm install blockhash-js
+npm install --save-dev typescript vitest @vitest/coverage-v8
+npm test
 ```
 
 **Acceptance test.**
@@ -203,7 +203,7 @@ pnpm test
 
 ### Phase 3 — Frontend skeleton + mock mode
 
-**Goal.** A user can `pnpm dev`, navigate to `/`, `/register`, `/verify`, `/certificate/proof_demo`, complete the register flow with mocked wallet + chain + API, and see a certificate page render.
+**Goal.** A user can `npm run dev`, navigate to `/`, `/register`, `/verify`, `/certificate/proof_demo`, complete the register flow with mocked wallet + chain + API, and see a certificate page render.
 
 **Read first.** [`frontend/instruction.md`](frontend/instruction.md) sections "Setup", "Folder Structure", "Routing & Pages", "State Machine", "API Client", "Mock vs Real Modes".
 
@@ -226,11 +226,11 @@ NEXT_PUBLIC_WEB3AUTH_NETWORK=sapphire_devnet
 
 ```bash
 cd frontend
-pnpm install
-pnpm dev
+npm install
+npm run dev
 # in another terminal:
-pnpm typecheck
-pnpm lint
+npm run typecheck
+npm run lint
 ```
 
 **Acceptance test.**
@@ -240,7 +240,7 @@ pnpm lint
 - Drop `frontend/fixtures/demo/original.mp4`, type a title, submit → certificate page renders with mock signature + Solana Explorer link.
 - `/verify` accepts a file and renders a result badge.
 - `/certificate/proof_demo` SSR-renders without JS (test with `curl localhost:3000/certificate/proof_demo | grep "Demo"`).
-- `pnpm typecheck && pnpm lint` clean.
+- `npm run typecheck && npm run lint` clean.
 
 **Common pitfalls.**
 
@@ -315,11 +315,11 @@ supabase start                          # if Supabase CLI installed
 docker run --name vidchain-pg -e POSTGRES_PASSWORD=postgres -p 54322:5432 -d postgres:16
 
 cd frontend
-pnpm add prisma @prisma/client pino
-pnpm exec prisma init
+npm install prisma @prisma/client pino
+npx prisma init
 # Replace prisma/schema.prisma with the content from backend/instruction.md
-pnpm exec prisma migrate dev --name init
-pnpm exec prisma generate
+npx prisma migrate dev --name init
+npx prisma generate
 ```
 
 Then turn off the API mock:
@@ -371,10 +371,10 @@ DATABASE_URL=postgresql://postgres:postgres@localhost:54322/postgres
 
 ```bash
 cd frontend
-pnpm add @web3auth/modal @web3auth/base @web3auth/solana-provider @web3auth/auth-adapter
+npm install @web3auth/modal @web3auth/base @web3auth/solana-provider @web3auth/auth-adapter
 # turn off the chain mock
 # frontend/.env.local: NEXT_PUBLIC_USE_MOCK_CHAIN=false
-pnpm dev
+npm run dev
 ```
 
 **Acceptance test.**
@@ -384,7 +384,7 @@ pnpm dev
 - Wallet balance ≥ 0.05 SOL on Devnet (auto-airdrop ran).
 - Submitting a register flow produces a real Devnet transaction; clicking the Solana Explorer link shows the tx as confirmed and invoking the VidChain program.
 - Logging out (disconnect) clears `useVidchainWallet().publicKey` to `null`.
-- `pnpm typecheck && pnpm lint` clean.
+- `npm run typecheck && npm run lint` clean.
 
 **Common pitfalls.**
 
@@ -396,7 +396,7 @@ pnpm dev
 
 ### Phase 7 — E2E + CI
 
-**Goal.** `pnpm test`, `pnpm test:e2e`, `pnpm anchor:test` all green locally and on GitHub Actions.
+**Goal.** `npm test`, `npm run test:e2e`, `npm run anchor:test` all green locally and on GitHub Actions.
 
 **Read first.** [`TESTING.md`](TESTING.md) in full. Especially "End-to-End Tests", "Mocking the Wallet", "CI Pipeline".
 
@@ -416,10 +416,10 @@ pnpm dev
 
 ```bash
 cd frontend
-pnpm add -D @playwright/test
-pnpm exec playwright install chromium
-pnpm test
-pnpm test:e2e
+npm install --save-dev @playwright/test
+npx playwright install chromium
+npm test
+npm run test:e2e
 ```
 
 **Acceptance test.**
@@ -432,7 +432,7 @@ pnpm test:e2e
 
 - Selecting elements by text or class instead of `data-testid` — flaky on copy or Tailwind changes.
 - Forgetting to set `NEXT_PUBLIC_USE_MOCK_CHAIN=true` in the Playwright `webServer.env` — tests open the real Web3Auth modal and hang.
-- Running Playwright against `pnpm dev` instead of `pnpm build && pnpm start` — picks up dev-only behavior that doesn't ship.
+- Running Playwright against `npm run dev` instead of `npm run build && npm start` — picks up dev-only behavior that doesn't ship.
 
 ---
 
@@ -613,21 +613,29 @@ export const env = { ...parsedPublic, ...parsedServer };
 }
 ```
 
-### D. Root `package.json`
+### D. Root `package.json` (npm workspaces)
 
 ```json
 {
   "name": "vidchain",
   "version": "0.1.0",
   "private": true,
-  "packageManager": "pnpm@9.12.0",
+  "packageManager": "npm@10.9.0",
+  "engines": { "node": ">=20" },
+  "workspaces": [
+    "frontend",
+    "backend",
+    "fingerprinting",
+    "bot",
+    "shared"
+  ],
   "scripts": {
-    "dev":           "pnpm --filter frontend dev",
-    "build":         "pnpm -r build",
-    "lint":          "pnpm -r lint",
-    "typecheck":     "pnpm -r typecheck",
-    "test":          "pnpm -r test",
-    "test:e2e":      "pnpm --filter frontend test:e2e",
+    "dev":           "npm run dev --workspace=frontend",
+    "build":         "npm run build --workspaces --if-present",
+    "lint":          "npm run lint --workspaces --if-present",
+    "typecheck":     "npm run typecheck --workspaces --if-present",
+    "test":          "npm test --workspaces --if-present",
+    "test:e2e":      "npm run test:e2e --workspace=frontend",
     "anchor:build":  "cd blockchain && anchor build",
     "anchor:test":   "cd blockchain && anchor test",
     "anchor:deploy": "cd blockchain && anchor deploy --provider.cluster devnet"
@@ -635,15 +643,28 @@ export const env = { ...parsedPublic, ...parsedServer };
 }
 ```
 
-### E. `pnpm-workspace.yaml`
+> npm workspaces are declared **inline** via the `"workspaces"` array. There is no separate `pnpm-workspace.yaml` or `npm-workspace.yaml` — npm reads the array from this file. The `--if-present` flag lets workspaces without that script (e.g. `bot/` may not have a `lint` script yet) be skipped silently.
 
-```yaml
-packages:
-  - "frontend"
-  - "backend"
-  - "fingerprinting"
-  - "bot"
-  - "shared"
+### E. Workspace install commands cheat sheet
+
+```bash
+# Install everything (root + every workspace)
+npm install
+
+# Add a runtime dep to one workspace
+npm install zod --workspace=shared
+
+# Add a dev dep to one workspace
+npm install --save-dev vitest --workspace=fingerprinting
+
+# Run a script in one workspace
+npm run dev --workspace=frontend
+
+# Run a script across all workspaces that define it
+npm run lint --workspaces --if-present
+
+# Reproducible CI install (uses package-lock.json, no resolution work)
+npm ci
 ```
 
 ---
@@ -653,7 +674,7 @@ packages:
 Before moving on:
 
 1. Run the phase's **Acceptance test**. If it fails, fix and re-run.
-2. Run `pnpm typecheck && pnpm lint && pnpm test` from the repo root.
+2. Run `npm run typecheck && npm run lint && npm test` from the repo root.
 3. Commit with a Conventional Commit message scoped to the phase: `feat(shared): add proof + verification schemas (phase 1)`.
 4. Open a draft PR if you want CI feedback.
 

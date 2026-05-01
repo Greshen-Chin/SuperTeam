@@ -44,9 +44,9 @@ Build Telegram first. WhatsApp goes on the post-hackathon roadmap.
 
 ```bash
 cd bot
-pnpm init -y
-pnpm add grammy @grammyjs/files zod pino dotenv
-pnpm add -D typescript tsx vitest @types/node
+npm init -y
+npm install grammy @grammyjs/files zod pino dotenv
+npm install --save-dev typescript tsx vitest @types/node
 
 cp .env.example .env
 # fill TELEGRAM_BOT_TOKEN (from @BotFather) and BACKEND_API_URL
@@ -216,10 +216,10 @@ Recommended: **Fly.io** for production, **`bot.start()` long-polling locally** f
 ```dockerfile
 FROM node:20-alpine
 WORKDIR /app
-COPY package.json pnpm-lock.yaml ./
-RUN corepack enable && pnpm install --frozen-lockfile
+COPY package.json package-lock.json ./
+RUN npm ci
 COPY . .
-RUN pnpm build
+RUN npm run build
 CMD ["node", "--enable-source-maps", "dist/index.js"]
 ```
 

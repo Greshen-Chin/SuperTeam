@@ -36,9 +36,9 @@ The shared goal: **one source of truth for types, schemas, error codes, and arch
 
 ```bash
 cd shared
-pnpm init -y
-pnpm add zod
-pnpm add -D typescript vitest
+npm init -y
+npm install zod
+npm install --save-dev typescript vitest
 ```
 
 `shared/package.json`:
@@ -70,7 +70,7 @@ import { proofSchema, type Proof, type Fingerprint } from "@vidchain/shared";
 import { ErrorCode } from "@vidchain/shared/errors";
 ```
 
-> Today the frontend has a copy at `frontend/src/shared/schemas.ts`. Once `pnpm-workspace.yaml` is added, replace that file with `export * from "@vidchain/shared"` and delete the duplicate.
+> Today the frontend has a copy at `frontend/src/shared/schemas.ts`. Once npm workspaces are wired up in the root `package.json`, replace that file with `export * from "@vidchain/shared"` and delete the duplicate.
 
 ---
 
@@ -313,5 +313,5 @@ The `version` field in fingerprint payloads (`"v1"`) lets the backend route old 
 - [ ] All five other packages import types from `@vidchain/shared` — no duplicated types anywhere.
 - [ ] `proofSchema.parse(JSON.parse(JSON.stringify(proof)))` round-trips for every fixture.
 - [ ] `ErrorCode` is the only string set used in API errors and frontend toast switches.
-- [ ] `pnpm typecheck` and `pnpm test` green in `shared/`.
+- [ ] `npm run typecheck` and `npm test` green in `shared/`.
 - [ ] No external runtime dependencies beyond `zod`.

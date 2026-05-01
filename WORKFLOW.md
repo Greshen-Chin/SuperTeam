@@ -200,14 +200,14 @@ Creator finds a wallet that registered a copy of their video
 
 ```bash
 # Terminal 1 — frontend (Next.js)
-pnpm dev
+npm run dev
 
 # Terminal 2 — Anchor local validator + program
 solana-test-validator
 cd blockchain && anchor build && anchor deploy
 
 # Terminal 3 — tests in watch mode
-pnpm test --watch
+npm test -- --watch
 
 # Terminal 4 — Supabase local (optional)
 supabase start
@@ -250,14 +250,14 @@ Examples:
 ```text
 feat(frontend): add verify page with confidence meter
 fix(blockchain): correct PDA seed for proof account
-chore(repo): add pnpm-workspace.yaml
+chore(repo): add npm workspaces config
 test(fingerprinting): add re-encoded video match spec
 ```
 
 ### Pull request checklist
 
 - [ ] Branch is rebased on latest `main`
-- [ ] `pnpm lint && pnpm typecheck && pnpm test` pass locally
+- [ ] `npm run lint && npm run typecheck && npm test` pass locally
 - [ ] Playwright spec added or updated for any new user-facing flow
 - [ ] `.env.example` updated if new env vars introduced
 - [ ] Screenshots/GIFs attached for UI changes
@@ -267,10 +267,10 @@ test(fingerprinting): add re-encoded video match spec
 
 `.github/workflows/ci.yml` runs on every PR:
 
-- `pnpm lint`
-- `pnpm typecheck`
-- `pnpm test` (Vitest)
-- `pnpm test:e2e` (Playwright on Chromium)
+- `npm run lint`
+- `npm run typecheck`
+- `npm test` (Vitest)
+- `npm run test:e2e` (Playwright on Chromium)
 - `cd blockchain && anchor build` (cargo cache)
 
 A green PR auto-deploys a Vercel preview; merging to `main` deploys to production.
@@ -285,7 +285,7 @@ Hour-level granularity is optimistic; treat as a sequencing aid, not a contract.
 
 | Block | Workstream | Output |
 |---|---|---|
-| Morning | `shared/` | All Zod schemas defined and exported. `pnpm test` covers schema parse. |
+| Morning | `shared/` | All Zod schemas defined and exported. `npm test` covers schema parse. |
 | Morning | `fingerprinting/` | `sha256(file)` + `phash(file)` + `match()` working with unit tests. |
 | Afternoon | `frontend/` | Home + Register page UI (no real wallet yet). Mock API client wired. |
 | Afternoon | `backend/` (API routes) | `POST /api/proofs` + `GET /api/proofs/:id` against in-memory Map. |

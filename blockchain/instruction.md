@@ -82,7 +82,7 @@ solana balance
 cd blockchain
 anchor init vidchain --no-git    # creates programs/vidchain, tests, Anchor.toml
 # move generated content up if needed so layout matches below
-pnpm install                     # install Anchor's TS test deps
+npm install                      # install Anchor's TS test deps
 ```
 
 ---

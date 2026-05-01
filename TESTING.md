@@ -4,10 +4,10 @@ Three test layers, one philosophy: **the demo cannot fail on stage.**
 
 | Layer | Tool | Where | Run with |
 |---|---|---|---|
-| Unit | Vitest | every package's `src/**/*.test.ts` or `tests/unit/` | `pnpm test` |
-| Integration | Vitest + msw + supertest | `frontend/src/server/**/*.test.ts` | `pnpm test` |
-| End-to-end | Playwright | `frontend/tests/e2e/*.spec.ts` | `pnpm test:e2e` |
-| On-chain | Anchor (mocha) | `blockchain/tests/*.ts` | `pnpm anchor:test` |
+| Unit | Vitest | every package's `src/**/*.test.ts` or `tests/unit/` | `npm test` |
+| Integration | Vitest + msw + supertest | `frontend/src/server/**/*.test.ts` | `npm test` |
+| End-to-end | Playwright | `frontend/tests/e2e/*.spec.ts` | `npm run test:e2e` |
+| On-chain | Anchor (mocha) | `blockchain/tests/*.ts` | `npm run anchor:test` |
 
 The Playwright e2e is the **submission gate** — it has to be green before you ship.
 
@@ -58,10 +58,10 @@ ESM-native, drop-in Jest API, ~3× faster than Jest, watch mode reloads in <100 
 ### Setup (per package)
 
 ```bash
-pnpm add -D vitest @vitest/coverage-v8
+npm install --save-dev vitest @vitest/coverage-v8
 
 # For React component tests in frontend
-pnpm add -D @testing-library/react @testing-library/user-event jsdom @vitejs/plugin-react
+npm install --save-dev @testing-library/react @testing-library/user-event jsdom @vitejs/plugin-react @testing-library/jest-dom
 ```
 
 `vitest.config.ts` (frontend):
@@ -215,7 +215,7 @@ describe("POST /api/proofs", () => {
 For end-to-end backend tests against a real Postgres, use Prisma's test environment:
 
 ```bash
-DATABASE_URL=postgresql://localhost:54322/vidchain_test pnpm test
+DATABASE_URL=postgresql://localhost:54322/vidchain_test npm test
 ```
 
 ---
@@ -234,8 +234,8 @@ DATABASE_URL=postgresql://localhost:54322/vidchain_test pnpm test
 
 ```bash
 cd frontend
-pnpm add -D @playwright/test
-pnpm exec playwright install chromium     # browser binary; use --with-deps on Linux/CI
+npm install --save-dev @playwright/test
+npx playwright install chromium           # browser binary; use --with-deps on Linux/CI
 ```
 
 `frontend/playwright.config.ts`:
@@ -257,7 +257,7 @@ export default defineConfig({
     screenshot: "only-on-failure",
   },
   webServer: {
-    command: "pnpm build && pnpm start",
+    command: "npm run build && npm start",
     url: "http://localhost:3000",
     reuseExistingServer: !process.env.CI,
     timeout: 180_000,
@@ -419,7 +419,7 @@ test.beforeEach(async ({ page }) => {
 
 ```bash
 # starts a local validator, deploys the program, runs mocha specs
-pnpm anchor:test
+npm run anchor:test
 
 # run a single file
 cd blockchain && anchor test -- --grep "register_proof"
@@ -597,27 +597,23 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
-        with: { version: 9 }
       - uses: actions/setup-node@v4
-        with: { node-version: 20, cache: pnpm }
-      - run: pnpm install --frozen-lockfile
-      - run: pnpm lint
-      - run: pnpm typecheck
-      - run: pnpm test
+        with: { node-version: 20, cache: npm }
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm test
 
   e2e:
     runs-on: ubuntu-latest
     needs: lint-typecheck-unit
     steps:
       - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
-        with: { version: 9 }
       - uses: actions/setup-node@v4
-        with: { node-version: 20, cache: pnpm }
-      - run: pnpm install --frozen-lockfile
-      - run: pnpm exec playwright install --with-deps chromium
-      - run: pnpm test:e2e
+        with: { node-version: 20, cache: npm }
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - run: npm run test:e2e
         env:
           NEXT_PUBLIC_USE_MOCK_API: "true"
           NEXT_PUBLIC_USE_MOCK_CHAIN: "true"
@@ -679,9 +675,9 @@ Coverage thresholds: aim for **70% lines** in `fingerprinting/` and `shared/`. D
 ### Vitest
 
 ```bash
-pnpm test --watch                           # watch mode
-pnpm test path/to/file.test.ts -t "name"    # run one test by name
-pnpm test --reporter=verbose                # full output
+npm test -- --watch                         # watch mode
+npm test -- path/to/file.test.ts -t "name"  # run one test by name
+npm test -- --reporter=verbose              # full output
 ```
 
 Use `console.log` freely in test files; remove from production code only.
@@ -689,11 +685,11 @@ Use `console.log` freely in test files; remove from production code only.
 ### Playwright
 
 ```bash
-pnpm test:e2e --ui                                 # GUI inspector
-pnpm test:e2e --debug                              # step through
-pnpm test:e2e tests/e2e/verify-flow.spec.ts        # run one file
-pnpm test:e2e --headed --browser=chromium          # see the browser
-pnpm exec playwright show-report                   # open last HTML report
+npm run test:e2e -- --ui                              # GUI inspector
+npm run test:e2e -- --debug                           # step through
+npm run test:e2e -- tests/e2e/verify-flow.spec.ts     # run one file
+npm run test:e2e -- --headed --browser=chromium       # see the browser
+npx playwright show-report                            # open last HTML report
 ```
 
 When CI fails, download the `playwright-report` artifact from the GitHub Actions run — it contains screenshots, videos, and the trace viewer for every failed test.
@@ -707,4 +703,4 @@ anchor test --skip-local-validator        # against running validator
 
 ---
 
-**Bottom line:** if `pnpm test && pnpm test:e2e && pnpm anchor:test` is green from a clean clone, the demo will not surprise you on stage.
+**Bottom line:** if `npm test && npm run test:e2e && npm run anchor:test` is green from a clean clone, the demo will not surprise you on stage.

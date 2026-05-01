@@ -44,9 +44,9 @@ Standalone package layout (works as a workspace package or a folder consumed by 
 
 ```bash
 cd fingerprinting
-pnpm init -y
-pnpm add blockhash-js
-pnpm add -D typescript vitest @vitest/coverage-v8
+npm init -y
+npm install blockhash-js
+npm install --save-dev typescript vitest @vitest/coverage-v8
 ```
 
 `fingerprinting/package.json`:

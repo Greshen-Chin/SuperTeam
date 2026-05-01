@@ -36,7 +36,7 @@ Examples:
 ```
 feat(frontend): add verify page with confidence meter
 fix(blockchain): correct PDA seed for proof account
-chore(repo): add pnpm-workspace.yaml
+chore(repo): add npm workspaces config
 test(fingerprinting): cover trimmed-video sliding match
 feat(shared)!: rename frameHashes → frameFingerprints
 ```
@@ -63,7 +63,7 @@ Notable implementation choices or trade-offs.
 Required for any UI change.
 
 ## Test plan
-- [ ] `pnpm lint && pnpm typecheck && pnpm test` pass
+- [ ] `npm run lint && npm run typecheck && npm test` pass
 - [ ] Playwright spec added/updated
 - [ ] Manually verified on Vercel preview URL: <link>
 ```
@@ -85,7 +85,7 @@ Required for any UI change.
 ## Code Style
 
 - TypeScript **strict** mode everywhere.
-- ESLint is the source of truth. `pnpm lint --fix` before pushing.
+- ESLint is the source of truth. `npm run lint -- --fix` before pushing.
 - Prettier formats on save (configure your IDE; default config, no `.prettierrc` needed).
 - Filenames: `kebab-case.ts`. Components: `PascalCase.tsx`. Hooks: `use-camel-case.ts`.
 - No `any` without an inline ESLint disable + reason.
@@ -116,13 +116,13 @@ Layered import order (enforce via `eslint-plugin-import`):
 Optional but recommended — install [`husky`](https://typicode.github.io/husky):
 
 ```bash
-pnpm add -D husky lint-staged
-pnpm exec husky init
+npm install --save-dev husky lint-staged
+npx husky init
 ```
 
 `.husky/pre-commit`:
 ```sh
-pnpm exec lint-staged
+npx lint-staged
 ```
 
 `package.json`:

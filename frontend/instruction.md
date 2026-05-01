@@ -43,9 +43,9 @@ The frontend does **not**:
 
 ```bash
 cd frontend
-pnpm install                       # or npm/yarn if not on workspaces
+npm install
 cp .env.example .env.local
-pnpm dev                           # http://localhost:3000
+npm run dev                        # http://localhost:3000
 ```
 
 `.env.local` minimum to boot in mock mode:
@@ -67,25 +67,25 @@ NEXT_PUBLIC_USE_MOCK_CHAIN=true
 next react react-dom typescript tailwindcss zod clsx lucide-react tailwind-merge
 
 # Add for real Solana integration
-pnpm add @solana/web3.js @solana/wallet-adapter-react @solana/wallet-adapter-react-ui \
-        @solana/wallet-adapter-base @solana/wallet-adapter-wallets \
-        @coral-xyz/anchor @metaplex-foundation/mpl-token-metadata bs58
+npm install @solana/web3.js @solana/wallet-adapter-react @solana/wallet-adapter-react-ui \
+            @solana/wallet-adapter-base @solana/wallet-adapter-wallets \
+            @coral-xyz/anchor @metaplex-foundation/mpl-token-metadata bs58
 
 # Add for Web3Auth (social login → embedded Solana wallet)
-pnpm add @web3auth/modal @web3auth/base @web3auth/solana-provider @web3auth/auth-adapter
+npm install @web3auth/modal @web3auth/base @web3auth/solana-provider @web3auth/auth-adapter
 
 # Add for fingerprinting
-pnpm add blockhash-js
+npm install blockhash-js
 
 # Add for IPFS
-pnpm add nft.storage   # or "@pinata/sdk" if using Pinata
+npm install nft.storage          # or "@pinata/sdk" if using Pinata
 
 # Add for testing
-pnpm add -D vitest @vitejs/plugin-react jsdom @testing-library/react @testing-library/user-event
-pnpm add -D @playwright/test
+npm install --save-dev vitest @vitejs/plugin-react jsdom @testing-library/react @testing-library/user-event @testing-library/jest-dom
+npm install --save-dev @playwright/test
 
 # Optional: better forms + state
-pnpm add react-hook-form @hookform/resolvers
+npm install react-hook-form @hookform/resolvers
 ```
 
 ---
@@ -673,15 +673,15 @@ The frontend ships with two flags so any teammate can develop without backend or
 See **[TESTING.md](../TESTING.md)** for the full guide. Frontend-specific:
 
 - **Unit (Vitest + Testing Library):** test `lib/`, `features/*` hooks, and pure components.
-- **E2E (Playwright):** `tests/e2e/*.spec.ts` against `pnpm build && pnpm start` with `NEXT_PUBLIC_USE_MOCK_*=true`.
+- **E2E (Playwright):** `tests/e2e/*.spec.ts` against `npm run build && npm start` with `NEXT_PUBLIC_USE_MOCK_*=true`.
 - **Wallet mocking:** for e2e, inject a fake wallet via Playwright `addInitScript` that auto-approves `signTransaction`.
 
 Quick:
 
 ```bash
-pnpm test              # vitest
-pnpm test:e2e          # playwright
-pnpm test:e2e --ui     # playwright debugger
+npm test                  # vitest
+npm run test:e2e          # playwright
+npm run test:e2e -- --ui  # playwright debugger
 ```
 
 ---
@@ -702,7 +702,7 @@ pnpm test:e2e --ui     # playwright debugger
 - [ ] Demo can be performed in under 3 minutes on a stage laptop.
 - [ ] All loading, error, success states are explicit and on-screen.
 - [ ] Certificate page is server-rendered, share-ready, and works without JS.
-- [ ] `pnpm typecheck && pnpm lint` clean.
+- [ ] `npm run typecheck && npm run lint` clean.
 - [ ] Vitest unit + Playwright e2e green in CI.
 - [ ] Lighthouse Performance ≥ 90 on `/` and `/certificate/[id]`.
 - [ ] Lives at the production Vercel URL with mock flags `false`.

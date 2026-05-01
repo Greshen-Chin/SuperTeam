@@ -35,7 +35,7 @@ Every deploy is reversible — Vercel has instant rollback, Anchor programs can 
 
 Before any deploy:
 
-- [ ] `pnpm lint && pnpm typecheck && pnpm test && pnpm test:e2e` green locally.
+- [ ] `npm run lint && npm run typecheck && npm test && npm run test:e2e` green locally.
 - [ ] All env keys exist in `.env.example` files.
 - [ ] No real secrets in git: `git ls-files | grep -E "\.env\.(local|production)$"` returns nothing.
 - [ ] Anchor program deployed and IDL committed under `blockchain/clients/ts/idl/`.
@@ -51,7 +51,7 @@ Before any deploy:
 
 1. Create Vercel account + install CLI:
    ```bash
-   pnpm add -g vercel
+   npm install -g vercel
    vercel login
    ```
 2. From `frontend/` directory:
@@ -62,7 +62,7 @@ Before any deploy:
    Select scope, accept defaults except:
    - **Directory** = `./` (you're already in `frontend/`)
    - **Framework** = Next.js (auto-detected)
-   - **Build Command** = `pnpm build` (auto-detected)
+   - **Build Command** = `npm run build` (auto-detected)
 3. Configure root if monorepo: in Vercel dashboard → Settings → General → **Root Directory** = `frontend`.
 
 ### Environment variables
@@ -109,8 +109,8 @@ Vercel's GitHub integration deploys automatically:
 
 ### Build settings (defaults are fine)
 
-- **Build command**: `pnpm build`
-- **Install command**: `pnpm install --frozen-lockfile`
+- **Build command**: `npm run build`
+- **Install command**: `npm ci`
 - **Output directory**: `.next` (Next.js default)
 - **Node.js version**: 20.x
 
@@ -145,7 +145,7 @@ Set this as `DATABASE_URL` in Vercel.
 
 ```bash
 cd frontend
-pnpm exec prisma migrate deploy        # applies prisma/migrations/* to the linked DB
+npx prisma migrate deploy              # applies prisma/migrations/* to the linked DB
 ```
 
 For local development against a hosted DB, use the **direct** connection string (port 5432) for `prisma migrate dev` and the **pooled** one for runtime.
@@ -378,7 +378,7 @@ If any step fails, [rollback](#rollback) and investigate.
 A quick scripted version (Playwright against production):
 
 ```bash
-PLAYWRIGHT_BASE_URL=https://vidchain.app pnpm test:e2e tests/e2e/smoke.spec.ts
+PLAYWRIGHT_BASE_URL=https://vidchain.app npm run test:e2e -- tests/e2e/smoke.spec.ts
 ```
 
 ---
