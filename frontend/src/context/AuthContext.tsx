@@ -1,105 +1,99 @@
 "use client";
 
-import { createContext, useContext, useMemo, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
-import { GoogleOAuthProvider, useGoogleLogin } from "@react-oauth/google";
-import type { Keypair } from "@solana/web3.js";
-import { deriveSolanaKeypairFromGoogleSub, exportPublicWallet } from "@/utils/walletDerivation";
-import { getAppSalt, getGoogleClientId } from "@/utils/env";
+import { useVidchainWallet } from "@/lib/use-vidchain-wallet";
+import { useWeb3Auth } from "@/components/providers/web3auth-provider";
 
-type GoogleUser = {
-  sub: string;
-  email: string;
+type AuthUser = {
   name: string;
+  email: string;
   picture?: string;
 };
 
 type AuthContextValue = {
-  user: GoogleUser | null;
-  keypair: Keypair | null;
+  user: AuthUser | null;
   publicAddress: string | null;
   isLoggedIn: boolean;
   isLoading: boolean;
   error: string | null;
   loginWithGoogle: () => void;
+  loginWithEmail: () => void;
   logout: () => void;
 };
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const googleClientId = getGoogleClientId() || "placeholder-not-configured";
-
-  return (
-    <GoogleOAuthProvider clientId={googleClientId}>
-      <AuthStateProvider>{children}</AuthStateProvider>
-    </GoogleOAuthProvider>
-  );
+  return <AuthStateProvider>{children}</AuthStateProvider>;
 }
 
 function AuthStateProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<GoogleUser | null>(null);
-  const [keypair, setKeypair] = useState<Keypair | null>(null);
+  const wallet = useVidchainWallet();
+  const { getUserInfo } = useWeb3Auth();
+  const [user, setUser] = useState<AuthUser | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const login = useGoogleLogin({
-    flow: "implicit",
-    scope: "openid email profile",
-    onSuccess: async (tokenResponse) => {
-      try {
-        setIsLoading(true);
-        setError(null);
-        const profileResponse = await fetch("https://www.googleapis.com/oauth2/v3/userinfo", {
-          headers: {
-            Authorization: `Bearer ${tokenResponse.access_token}`
-          }
-        });
-
-        if (!profileResponse.ok) {
-          throw new Error("Login Google berhasil, tetapi profil tidak bisa dibaca.");
-        }
-
-        const profile = (await profileResponse.json()) as GoogleUser;
-        if (!profile.sub) {
-          throw new Error("Google tidak mengirim ID akun yang dibutuhkan.");
-        }
-
-        const nextKeypair = await deriveSolanaKeypairFromGoogleSub(profile.sub, getAppSalt());
-        setUser(profile);
-        setKeypair(nextKeypair);
-      } catch (nextError) {
-        setError(nextError instanceof Error ? nextError.message : "Login Google gagal. Coba lagi.");
-      } finally {
-        setIsLoading(false);
-      }
-    },
-    onError: () => {
-      setError("Login Google dibatalkan atau gagal. Coba lagi.");
-      setIsLoading(false);
+  // Fetch display name/email from Web3Auth when connected
+  useEffect(() => {
+    if (!wallet.connected || wallet.source !== "web3auth") {
+      if (!wallet.connected) setUser(null);
+      return;
     }
-  });
-
-  const value = useMemo<AuthContextValue>(() => {
-    return {
-      user,
-      keypair,
-      publicAddress: keypair ? exportPublicWallet(keypair) : null,
-      isLoggedIn: Boolean(user && keypair),
-      isLoading,
-      error,
-      loginWithGoogle: () => {
-        setIsLoading(true);
-        setError(null);
-        login();
-      },
-      logout: () => {
-        setUser(null);
-        setKeypair(null);
-        setError(null);
+    (async () => {
+      const info = await getUserInfo();
+      if (info.name ?? info.email) {
+        setUser({
+          name: info.name ?? info.email ?? "VidChain User",
+          email: info.email ?? "",
+          picture: info.profileImage,
+        });
       }
-    };
-  }, [error, isLoading, keypair, login, user]);
+    })();
+  }, [wallet.connected, wallet.source, getUserInfo]);
+
+  const loginWithGoogle = useCallback(() => {
+    setIsLoading(true);
+    setError(null);
+    wallet
+      .loginWithGoogle()
+      .catch((err: unknown) => {
+        setError(err instanceof Error ? err.message : "Login gagal. Coba lagi.");
+      })
+      .finally(() => setIsLoading(false));
+  }, [wallet]);
+
+  const loginWithEmail = useCallback(() => {
+    setIsLoading(true);
+    setError(null);
+    wallet
+      .loginWithEmail()
+      .catch((err: unknown) => {
+        setError(err instanceof Error ? err.message : "Login gagal. Coba lagi.");
+      })
+      .finally(() => setIsLoading(false));
+  }, [wallet]);
+
+  const logout = useCallback(() => {
+    setUser(null);
+    setError(null);
+    void wallet.disconnect();
+  }, [wallet]);
+
+  const value = useMemo<AuthContextValue>(
+    () => ({
+      user,
+      publicAddress: wallet.publicKey?.toBase58() ?? null,
+      isLoggedIn: wallet.connected,
+      isLoading: isLoading || wallet.connecting,
+      error,
+      loginWithGoogle,
+      loginWithEmail,
+      logout,
+    }),
+    [user, wallet.publicKey, wallet.connected, wallet.connecting, isLoading, error, loginWithGoogle, loginWithEmail, logout]
+  );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

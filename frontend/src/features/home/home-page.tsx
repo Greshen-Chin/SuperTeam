@@ -24,6 +24,7 @@ import {
 import { TextScramble } from "@/components/ui/text-scramble";
 import { routes } from "@/lib/routes";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/context/AuthContext";
 
 type SectionId = "hero" | "problem" | "solution" | "how" | "phash" | "royalties" | "dispute" | "cta";
 
@@ -793,6 +794,7 @@ function SpotTheFakeGame() {
   );
 }
 
+<<<<<<< HEAD
 function IncomeSimulator() {
   const [views, setViews] = useState(1000000);
   const [platform, setPlatform] = useState("YouTube");
@@ -861,6 +863,77 @@ function EarningsPanel({ amount, delay, label, tone }: { amount: number; delay: 
       </motion.p>
       <p className="mt-3 text-sm leading-6 text-zinc-400">Gross CPM model, platform fee removed, payout delay: {delay}.</p>
     </div>
+=======
+function FramelessGetStarted() {
+  const { loginWithGoogle, isLoggedIn, isLoading } = useAuth();
+  if (isLoggedIn) {
+    return (
+      <Link
+        className="group relative inline-flex h-14 items-center gap-4 overflow-hidden rounded-full px-1.5 pr-7 text-white outline-none transition duration-500 hover:-translate-y-1 hover:shadow-[0_0_48px_rgba(168,85,247,0.34)]"
+        href={routes.dashboard}
+      >
+        <span className="absolute inset-0 rounded-full bg-white/0 transition duration-500 group-hover:bg-white" />
+        <span className="absolute -left-14 top-1/2 h-20 w-20 -translate-y-1/2 rounded-full bg-violet-500/0 transition-all duration-700 ease-out group-hover:left-0 group-hover:h-64 group-hover:w-[130%] group-hover:bg-violet-500/90" />
+        <span className="absolute inset-x-8 bottom-0 h-px bg-white/45 transition duration-500 group-hover:inset-x-0 group-hover:bg-violet-200/0" />
+        <motion.span
+          animate={{ x: [0, 5, 0] }}
+          className="relative grid h-12 w-12 place-items-center rounded-full border border-white/18 bg-white/0 text-white/80 transition duration-500 group-hover:border-black/10 group-hover:bg-black group-hover:text-white"
+          transition={{ duration: 1.8, ease: "easeInOut", repeat: Infinity }}
+        >
+          <ArrowRight size={21} />
+        </motion.span>
+        <span className="relative text-base font-black tracking-tight text-white transition duration-500 group-hover:translate-x-1 group-hover:text-black">
+          Go to Dashboard
+        </span>
+      </Link>
+    );
+  }
+  return (
+    <button
+      className="group relative inline-flex h-14 items-center gap-4 overflow-hidden rounded-full px-1.5 pr-7 text-white outline-none transition duration-500 hover:-translate-y-1 hover:shadow-[0_0_48px_rgba(168,85,247,0.34)] disabled:opacity-60"
+      disabled={isLoading}
+      type="button"
+      onClick={() => void loginWithGoogle()}
+    >
+      <span className="absolute inset-0 rounded-full bg-white/0 transition duration-500 group-hover:bg-white" />
+      <span className="absolute -left-14 top-1/2 h-20 w-20 -translate-y-1/2 rounded-full bg-violet-500/0 transition-all duration-700 ease-out group-hover:left-0 group-hover:h-64 group-hover:w-[130%] group-hover:bg-violet-500/90" />
+      <span className="absolute inset-x-8 bottom-0 h-px bg-white/45 transition duration-500 group-hover:inset-x-0 group-hover:bg-violet-200/0" />
+      <motion.span
+        animate={{ x: [0, 5, 0] }}
+        className="relative grid h-12 w-12 place-items-center rounded-full border border-white/18 bg-white/0 text-white/80 transition duration-500 group-hover:border-black/10 group-hover:bg-black group-hover:text-white"
+        transition={{ duration: 1.8, ease: "easeInOut", repeat: Infinity }}
+      >
+        <ArrowRight size={21} />
+      </motion.span>
+      <span className="relative text-base font-black tracking-tight text-white transition duration-500 group-hover:translate-x-1 group-hover:text-black">
+        Get Started
+      </span>
+    </button>
+  );
+}
+
+function TryNowButton() {
+  const { loginWithGoogle, isLoading } = useAuth();
+  return (
+    <button
+      className="group relative mt-10 inline-flex h-12 items-center gap-3 overflow-hidden rounded-full border border-white/10 px-5 text-sm font-black text-white outline-none transition duration-500 hover:-translate-y-1 hover:border-violet-200/50 hover:shadow-[0_0_44px_rgba(124,58,237,0.32)] disabled:opacity-60"
+      disabled={isLoading}
+      type="button"
+      onClick={() => void loginWithGoogle()}
+    >
+      <span className="absolute inset-0 bg-white/[0.035]" />
+      <span className="absolute inset-y-0 left-0 w-0 bg-white transition-all duration-500 ease-out group-hover:w-full" />
+      <span className="absolute -right-10 top-1/2 h-20 w-20 -translate-y-1/2 rounded-full bg-violet-400/70 opacity-0 blur-md transition-all duration-700 group-hover:right-6 group-hover:opacity-100" />
+      <span className="relative transition duration-500 group-hover:text-black">Try Now</span>
+      <motion.span
+        animate={{ x: [0, 4, 0] }}
+        className="relative grid h-8 w-8 place-items-center rounded-full bg-white text-black transition duration-500 group-hover:bg-black group-hover:text-white"
+        transition={{ duration: 1.6, ease: "easeInOut", repeat: Infinity }}
+      >
+        <ArrowRight size={15} />
+      </motion.span>
+    </button>
+>>>>>>> 68e966a6aa83e72acc7ae06394c3a99e79cdc781
   );
 }
 
