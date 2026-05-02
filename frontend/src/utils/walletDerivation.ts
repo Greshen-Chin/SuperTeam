@@ -3,7 +3,10 @@ import bs58 from "bs58";
 
 export async function deriveSolanaKeypairFromGoogleSub(sub: string, salt: string) {
   const encoder = new TextEncoder();
-  const digest = await crypto.subtle.digest("SHA-256", encoder.encode(`${sub}:${salt}`));
+  const bytes = encoder.encode(`${sub}:${salt}`);
+  const buffer = new ArrayBuffer(bytes.byteLength);
+  new Uint8Array(buffer).set(bytes);
+  const digest = await crypto.subtle.digest("SHA-256", buffer);
   const seed = new Uint8Array(digest).slice(0, 32);
   return Keypair.fromSeed(seed);
 }
