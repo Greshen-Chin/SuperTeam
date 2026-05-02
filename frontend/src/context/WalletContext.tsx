@@ -2,14 +2,14 @@
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
-import { Connection, LAMPORTS_PER_SOL, PublicKey } from "@solana/web3.js";
-import { getSolanaRpcUrl } from "@/utils/env";
+import { LAMPORTS_PER_SOL } from "@solana/web3.js";
 import { fetchWalletNfts } from "@/utils/metaplex";
 import type { VidChainNft } from "@/utils/metaplex";
-import { useAuth } from "@/context/AuthContext";
+import { useVidchainWallet } from "@/lib/use-vidchain-wallet";
+import { env } from "@/lib/env";
+import { Connection } from "@solana/web3.js";
 
 type WalletContextValue = {
-  connection: Connection;
   balanceSol: number | null;
   nfts: VidChainNft[];
   isLoading: boolean;
@@ -20,25 +20,26 @@ type WalletContextValue = {
 const WalletContext = createContext<WalletContextValue | null>(null);
 
 export function WalletProvider({ children }: { children: ReactNode }) {
-  const { publicAddress } = useAuth();
-  const connection = useMemo(() => new Connection(getSolanaRpcUrl(), "confirmed"), []);
+  const { publicKey } = useVidchainWallet();
+  const connection = useMemo(() => new Connection(env.NEXT_PUBLIC_SOLANA_RPC_URL, "confirmed"), []);
   const [balanceSol, setBalanceSol] = useState<number | null>(null);
   const [nfts, setNfts] = useState<VidChainNft[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const refreshWallet = useCallback(async () => {
-    if (!publicAddress) {
+    if (!publicKey) {
       setBalanceSol(null);
       setNfts([]);
       return;
     }
-
     try {
       setIsLoading(true);
       setError(null);
-      const owner = new PublicKey(publicAddress);
-      const [lamports, walletNfts] = await Promise.all([connection.getBalance(owner), fetchWalletNfts(connection, owner)]);
+      const [lamports, walletNfts] = await Promise.all([
+        connection.getBalance(publicKey),
+        fetchWalletNfts(connection, publicKey),
+      ]);
       setBalanceSol(lamports / LAMPORTS_PER_SOL);
       setNfts(walletNfts);
     } catch {
@@ -46,22 +47,16 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     } finally {
       setIsLoading(false);
     }
-  }, [connection, publicAddress]);
+  }, [connection, publicKey]);
 
   useEffect(() => {
     void refreshWallet();
   }, [refreshWallet]);
 
-  const value = useMemo<WalletContextValue>(() => {
-    return {
-      connection,
-      balanceSol,
-      nfts,
-      isLoading,
-      error,
-      refreshWallet
-    };
-  }, [balanceSol, connection, error, isLoading, nfts, refreshWallet]);
+  const value = useMemo<WalletContextValue>(
+    () => ({ balanceSol, nfts, isLoading, error, refreshWallet }),
+    [balanceSol, nfts, isLoading, error, refreshWallet]
+  );
 
   return <WalletContext.Provider value={value}>{children}</WalletContext.Provider>;
 }
