@@ -1,13 +1,9 @@
 import { createPublicKey, randomBytes, verify as verifyEd25519 } from "node:crypto";
 import jwt from "jsonwebtoken";
-import bcrypt from "bcryptjs";
-import { OAuth2Client } from "google-auth-library";
 import bs58 from "bs58";
 import { config } from "./config.js";
 import type { User } from "./repositories/auth-repository.js";
 import { normalizeAddress } from "./repositories/auth-repository.js";
-
-const googleClient = config.googleClientId ? new OAuth2Client(config.googleClientId) : null;
 
 export function createNonce() {
   return randomBytes(24).toString("hex");
@@ -29,34 +25,8 @@ export function signAccessToken(user: User) {
   );
 }
 
-export async function hashPassword(password: string) {
-  return bcrypt.hash(password, 12);
-}
-
-export async function verifyPassword(password: string, passwordHash: string) {
-  return bcrypt.compare(password, passwordHash);
-}
-
 export function verifyAccessToken(token: string) {
   return jwt.verify(token, config.jwtSecret) as jwt.JwtPayload;
-}
-
-export async function verifyGoogleToken(token: string) {
-  if (!googleClient || !config.googleClientId) {
-    throw new Error("GOOGLE_CLIENT_ID is not configured.");
-  }
-
-  const tokenInfo = await googleClient.getTokenInfo(token);
-
-  if (!tokenInfo.email) {
-    throw new Error("Google token does not include an email.");
-  }
-
-  if (tokenInfo.aud !== config.googleClientId) {
-    throw new Error("Google token audience does not match this app.");
-  }
-
-  return { email: tokenInfo.email, sub: tokenInfo.sub ?? null };
 }
 
 export function verifyWalletSignature(input: { address: string; nonce: string; signature: string }) {

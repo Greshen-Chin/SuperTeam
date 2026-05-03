@@ -35,10 +35,11 @@ function AuthStateProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Fetch display name/email from Web3Auth when connected
+  // Fetch display name/email from Web3Auth when connected.
+  // Works for social login (Google/Email) — wallet-only connections return empty info, which is fine.
   useEffect(() => {
-    if (!wallet.connected || wallet.source !== "web3auth") {
-      if (!wallet.connected) setUser(null);
+    if (!wallet.connected) {
+      setUser(null);
       return;
     }
     (async () => {
@@ -51,7 +52,7 @@ function AuthStateProvider({ children }: { children: ReactNode }) {
         });
       }
     })();
-  }, [wallet.connected, wallet.source, getUserInfo]);
+  }, [wallet.connected, getUserInfo]);
 
   const loginWithGoogle = useCallback(() => {
     setIsLoading(true);
