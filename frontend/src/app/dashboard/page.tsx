@@ -1,6 +1,6 @@
-import { DashboardView } from "@/features/dashboard/dashboard-view";
+import { redirect } from "next/navigation";
+import { routes } from "@/lib/routes";
 
 export default function DashboardPage() {
-  return <DashboardView />;
+  redirect(routes.register);
 }
-

@@ -1,6 +1,6 @@
 "use client";
 
-import { useConnection, useWallet as useAdapterWallet } from "@solana/wallet-adapter-react";
+import { useWallet as useAdapterWallet } from "@solana/wallet-adapter-react";
 import { PublicKey } from "@solana/web3.js";
 import type { Transaction, VersionedTransaction } from "@solana/web3.js";
 import { SolanaWallet } from "@web3auth/solana-provider";
@@ -22,7 +22,6 @@ export type VidchainWallet = {
 export function useVidchainWallet(): VidchainWallet {
   const { provider, isConnected, ready, login, logout: w3aLogout } = useWeb3Auth();
   const adapter = useAdapterWallet();
-  const { connection: _connection } = useConnection();
   const [w3aPubkey, setW3aPubkey] = useState<PublicKey | null>(null);
 
   // Resolve the Web3Auth public key whenever the provider changes
@@ -99,6 +98,6 @@ export function useVidchainWallet(): VidchainWallet {
         throw new Error("No wallet connected");
       },
     }),
-    [publicKey, source, ready, provider, isConnected, adapter, login, w3aLogout]
+    [publicKey, source, ready, provider, adapter, login, w3aLogout]
   );
 }

@@ -2,11 +2,8 @@
 
 import Link from "next/link";
 import type { ReactNode } from "react";
-import { useEffect, useRef } from "react";
-import { ShieldCheck } from "lucide-react";
-import { usePathname, useRouter } from "next/navigation";
-import { ThemeToggle } from "@/components/ui/theme-toggle";
-import { useAuth } from "@/context/AuthContext";
+import { usePathname } from "next/navigation";
+import { Archive, BadgeCheck, Search, UploadCloud, Wallet } from "lucide-react";
 import { routes } from "@/lib/routes";
 import { cn } from "@/lib/utils";
 
@@ -14,88 +11,88 @@ type AppShellProps = {
   children: ReactNode;
 };
 
+const navItems = [
+  { href: routes.register, label: "Upload", icon: UploadCloud },
+  { href: routes.check, label: "Check", icon: Search },
+  { href: routes.nftStorage, label: "Proofs", icon: BadgeCheck },
+  { href: routes.videoStorage, label: "Vault", icon: Archive }
+];
+
+const homeNavItems = [
+  { href: "#problem", label: "Risk" },
+  { href: "#how", label: "Flow" },
+  { href: "#phash", label: "Copy Check" },
+  { href: "#dispute", label: "Report" },
+  { href: "#cta", label: "Try" }
+];
+
 export function AppShell({ children }: AppShellProps) {
   const pathname = usePathname();
-  const router = useRouter();
   const isHome = pathname === routes.home;
-  const { isLoggedIn, isLoading, loginWithGoogle, logout, user } = useAuth();
-  const prevLoggedIn = useRef(isLoggedIn);
-  const navItems = isHome
-    ? [
-        { href: "#hero", label: "Hero" },
-        { href: "#problem", label: "Problem" },
-        { href: "#how", label: "How it works" },
-        { href: "#phash", label: "pHash" }
-      ]
-    : [
-        { href: routes.register, label: "Register" },
-        { href: routes.verify, label: "Verify" },
-        { href: routes.certificate("proof_demo"), label: "Demo" }
-      ];
-
-  useEffect(() => {
-    if (!prevLoggedIn.current && isLoggedIn) {
-      router.push(routes.dashboard);
-    }
-    prevLoggedIn.current = isLoggedIn;
-  }, [isLoggedIn, router]);
 
   return (
-    <div className="min-h-screen bg-[var(--app-bg)] text-[var(--app-fg)]">
-      <header className={isHome ? "sticky top-0 z-50 border-b border-white/10 bg-black/92 shadow-[0_18px_80px_rgba(0,0,0,0.42)] backdrop-blur-xl" : "sticky top-0 z-40 border-b border-[var(--app-line)] bg-[var(--app-bg)]/85 backdrop-blur-xl"}>
-        <div className="mx-auto flex min-h-20 max-w-6xl flex-wrap items-center justify-between gap-3 px-4 py-3">
-          <Link className={isHome ? "flex items-center gap-3 text-xl font-bold text-white" : "flex items-center gap-3 text-xl font-bold text-[var(--app-fg)]"} href={routes.home}>
-            <span className="grid h-10 w-10 place-items-center rounded-xl bg-[var(--accent)] text-white shadow-lg shadow-violet-950/30">
-              <ShieldCheck size={19} />
-            </span>
-            VidChain
-          </Link>
+    <div className="min-h-screen bg-[var(--bg)] text-white">
+      <header className={cn("navbar", isHome && "home-navbar")}>
+        <Link className="nav-logo" href={routes.home}>
+          <ShieldLogo />
+          <span>VidChain</span>
+        </Link>
 
-          <div className="flex flex-1 items-center justify-end gap-2 sm:gap-3">
-            <nav className={cn("hidden items-center gap-6 lg:flex", !isHome && "rounded-full border border-[var(--app-line)] bg-[var(--app-panel)] px-1.5 py-1")}>
-              {navItems.map((item) => (
-                <Link
-                  className={cn(
-                    isHome
-                      ? "apple-nav-link relative py-2 text-sm font-bold text-white/62 transition hover:text-white"
-                      : "rounded-full px-4 py-2 text-sm font-bold text-[var(--app-muted)] transition hover:bg-[var(--app-panel-strong)] hover:text-[var(--app-fg)]"
-                  )}
-                  href={item.href}
-                  key={item.href}
-                >
-                  {item.label}
+        <nav className="nav-center" aria-label="Primary navigation">
+          {isHome
+            ? homeNavItems.map((item) => (
+                <Link className="nav-item home-nav-item" href={item.href} key={item.href}>
+                  <span>{item.label}</span>
                 </Link>
-              ))}
-            </nav>
+              ))
+            : navItems.map((item) => {
+                const Icon = item.icon;
 
-            {!isHome ? <ThemeToggle /> : null}
+                return (
+                  <Link className={cn("nav-item", pathname === item.href && "active")} href={item.href} key={item.href}>
+                    <Icon size={15} />
+                    <span>{item.label}</span>
+                  </Link>
+                );
+              })}
+        </nav>
 
-            {isLoggedIn ? (
-              <>
-                {user?.name ? <span className={isHome ? "hidden text-sm text-white/70 sm:block" : "hidden text-sm text-[var(--app-muted)] sm:block"}>{user.name}</span> : null}
-                <button
-                  className={isHome ? "rounded-full border border-white/12 bg-white/[0.04] px-4 py-2 text-sm font-black text-white/82 shadow-[0_0_34px_rgba(153,69,255,0.08)] transition hover:-translate-y-0.5 hover:border-red-200/40 hover:bg-red-200 hover:text-black" : "h-9 rounded-xl border border-[var(--app-line)] px-4 text-sm font-semibold text-[var(--app-fg)] transition hover:bg-[var(--app-line)]"}
-                  onClick={logout}
-                  type="button"
-                >
-                  Sign out
-                </button>
-              </>
-            ) : (
-              <button
-                className={isHome ? "rounded-full border border-white/12 bg-white/[0.04] px-4 py-2 text-sm font-black text-white/82 shadow-[0_0_34px_rgba(153,69,255,0.08)] transition hover:-translate-y-0.5 hover:border-emerald-200/40 hover:bg-emerald-200 hover:text-black disabled:opacity-50" : "h-9 rounded-xl bg-[var(--accent)] px-4 text-sm font-semibold text-white transition hover:opacity-90 disabled:opacity-50"}
-                disabled={isLoading}
-                onClick={() => void loginWithGoogle()}
-                type="button"
-              >
-                {isLoading ? "Connecting..." : "Sign In"}
-              </button>
-            )}
-          </div>
+        <div className="nav-right">
+          {isHome ? (
+            <Link className="home-nav-launch" href={routes.register}>
+              Launch app
+            </Link>
+          ) : (
+            <button className="wallet-pill" type="button" aria-label="Connected wallet 9a4F...FF32">
+              <span className="wallet-dot" />
+              9a4F...FF32
+            </button>
+          )}
+          <button className="nav-avatar" type="button" aria-label="Open account menu">
+            <span className="nav-avatar-inner">
+              <Wallet size={15} />
+            </span>
+          </button>
         </div>
       </header>
 
       <main>{children}</main>
     </div>
+  );
+}
+
+function ShieldLogo() {
+  return (
+    <svg width="22" height="22" viewBox="0 0 20 20" aria-hidden>
+      <path d="M10 1L2 4.5V9c0 4.5 3.5 8.5 8 9.5C15.5 17.5 18 13.5 18 9V4.5L10 1z" fill="url(#vidchain-shield-gradient)" />
+      <path d="M6.2 9.8h7.6M7.1 6.6h5.8" stroke="rgba(255,255,255,0.86)" strokeLinecap="round" strokeWidth="1.35" />
+      <defs>
+        <linearGradient id="vidchain-shield-gradient" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%" stopColor="#14F195" />
+          <stop offset="54%" stopColor="#4E9BFF" />
+          <stop offset="100%" stopColor="#9945FF" />
+        </linearGradient>
+      </defs>
+    </svg>
   );
 }

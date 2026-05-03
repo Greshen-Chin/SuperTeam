@@ -1,13 +1,12 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { DragEvent, HTMLAttributes, MouseEvent as ReactMouseEvent, PointerEvent, ReactNode } from "react";
+import type { DragEvent, HTMLAttributes, PointerEvent, ReactNode } from "react";
 import Link from "next/link";
 import { AnimatePresence, motion } from "framer-motion";
 import {
   ArrowRight,
   Bot,
-  Coins,
   FileVideo,
   Fingerprint,
   Flag,
@@ -24,18 +23,22 @@ import {
 import { TextScramble } from "@/components/ui/text-scramble";
 import { routes } from "@/lib/routes";
 import { cn } from "@/lib/utils";
+import { EntryExperience } from "./entry/entry-experience";
+import { OptimizedBackgroundCanvas } from "./backgrounds/optimized-background-canvas";
+import { CursorTrailCanvas } from "./systems/cursor-trail-canvas";
+import { MasterLoop } from "./systems/master-loop";
+import { SectionProxy } from "./systems/section-proxy";
 
-type SectionId = "hero" | "problem" | "solution" | "how" | "phash" | "royalties" | "dispute" | "cta";
+type SectionId = "hero" | "problem" | "solution" | "how" | "phash" | "dispute" | "cta";
 
-const sections: { id: SectionId; label: string; color: string }[] = [
-  { id: "hero", label: "Hero", color: "#14F195" },
-  { id: "problem", label: "Problem", color: "#fb7185" },
-  { id: "solution", label: "Solution", color: "#14F195" },
-  { id: "how", label: "How", color: "#9945FF" },
-  { id: "phash", label: "pHash", color: "#67e8f9" },
-  { id: "royalties", label: "Royalties", color: "#facc15" },
-  { id: "dispute", label: "Dispute", color: "#f87171" },
-  { id: "cta", label: "CTA", color: "#9945FF" }
+const sections: { id: SectionId; label: string }[] = [
+  { id: "hero", label: "Start" },
+  { id: "problem", label: "The Risk" },
+  { id: "solution", label: "The Fix" },
+  { id: "how", label: "Steps" },
+  { id: "phash", label: "Copy Check" },
+  { id: "dispute", label: "Report" },
+  { id: "cta", label: "Try It" }
 ];
 
 const sectionTints: Record<SectionId, string> = {
@@ -45,19 +48,7 @@ const sectionTints: Record<SectionId, string> = {
   how: "#0a0812",
   phash: "#08120a",
   problem: "#120808",
-  royalties: "#12100a",
   solution: "#081212"
-};
-
-const sectionColorRgb: Record<SectionId, [number, number, number]> = {
-  cta: [4, 4, 8],
-  dispute: [13, 8, 16],
-  hero: [8, 7, 18],
-  how: [8, 8, 15],
-  phash: [6, 13, 9],
-  problem: [18, 8, 8],
-  royalties: [10, 9, 0],
-  solution: [8, 15, 18]
 };
 
 function isSectionId(value: string): value is SectionId {
@@ -65,33 +56,16 @@ function isSectionId(value: string): value is SectionId {
 }
 
 export function HomePage() {
-  const [showIntro, setShowIntro] = useState(true);
   const [activeSection, setActiveSection] = useState<SectionId>("hero");
+  const [entryRevealed, setEntryRevealed] = useState(false);
+  const [loadedSections, setLoadedSections] = useState<SectionId[]>(["hero"]);
   const [soundOn, setSoundOn] = useState(false);
-  const [walletPopupOpen, setWalletPopupOpen] = useState(false);
-  const introTimeoutRef = useRef<number | null>(null);
-
-  const finishIntro = useCallback(() => {
-    if (introTimeoutRef.current) return;
-    introTimeoutRef.current = window.setTimeout(() => {
-      setShowIntro(false);
-      window.scrollTo({ top: 0, behavior: "auto" });
-    }, 640);
-  }, []);
 
   useEffect(() => {
     if (window.location.hash) {
       window.history.replaceState(null, "", window.location.pathname);
     }
     window.scrollTo({ top: 0, behavior: "auto" });
-    const fallbackIntro = window.setTimeout(() => {
-      setShowIntro(false);
-      window.scrollTo({ top: 0, behavior: "auto" });
-    }, 3200);
-    return () => {
-      window.clearTimeout(fallbackIntro);
-      if (introTimeoutRef.current) window.clearTimeout(introTimeoutRef.current);
-    };
   }, []);
 
   useEffect(() => {
@@ -114,17 +88,27 @@ export function HomePage() {
   }, [activeSection]);
 
   useEffect(() => {
-    const open = () => setWalletPopupOpen(true);
-    window.addEventListener("vidchain:wallet-popup", open);
-    return () => window.removeEventListener("vidchain:wallet-popup", open);
+    const lazySections = loadedSections.map((section) => new SectionProxy(section, () => import("./sections/lifecycle")));
+    return () => lazySections.forEach((section) => section.destroy());
+  }, [loadedSections]);
+
+  const revealHome = useCallback(() => {
+    setEntryRevealed(true);
+    const stagedSections: SectionId[] = ["problem", "solution", "how", "phash", "dispute", "cta"];
+    stagedSections.forEach((section, index) => {
+      window.setTimeout(() => {
+        setLoadedSections((current) => (current.includes(section) ? current : [...current, section]));
+      }, 520 + index * 420);
+    });
   }, []);
 
   return (
-    <main className="home-cinematic relative overflow-hidden bg-[#0A0A0F] text-white">
+    <main className={cn("home-cinematic relative overflow-hidden bg-[#0A0A0F] text-white", !entryRevealed && "home-entry-locked", entryRevealed && "home-entry-revealed")}>
       <DepthParallax />
-      <GlobalCanvas />
-      <LightBulbCursor />
-      <ProgressRail activeSection={activeSection} />
+      <OptimizedBackgroundCanvas activeSection={activeSection} />
+      {entryRevealed ? <CursorTrailCanvas /> : null}
+      {entryRevealed ? <LightBulbCursor /> : null}
+      {entryRevealed ? <ProgressRail activeSection={activeSection} /> : null}
       <button
         aria-label={soundOn ? "Disable interaction sounds" : "Enable interaction sounds"}
         className="fixed bottom-6 right-6 z-[70] grid h-12 w-12 place-items-center rounded-full border border-white/15 bg-black/80 text-cyan-100 shadow-[0_0_34px_rgba(103,232,249,0.16)] backdrop-blur-xl transition hover:-translate-y-1 hover:bg-white hover:text-black"
@@ -134,61 +118,32 @@ export function HomePage() {
         {soundOn ? <Volume2 size={18} /> : <VolumeX size={18} />}
       </button>
 
-      <AnimatePresence>
-        {showIntro ? (
-          <motion.div
-            animate={{ opacity: 1 }}
-            className="fixed inset-0 z-[90] grid place-items-center overflow-hidden bg-black"
-            exit={{ opacity: 0, scale: 1.02 }}
-            initial={{ opacity: 1 }}
-            transition={{ duration: 0.55, ease: "easeInOut" }}
-          >
-            <div className="pointer-events-none absolute inset-8 border border-white/10 md:inset-14" />
-            <motion.div
-              animate={{ y: ["-42vh", "42vh", "-42vh"], opacity: [0, 0.55, 0] }}
-              className="pointer-events-none absolute h-px w-full bg-white/25"
-              transition={{ duration: 2.4, ease: "easeInOut", repeat: Infinity }}
-            />
-            <div className="relative z-20 px-4 text-center">
-              <TextScramble
-                as="h1"
-                characterSet="VIDCHAIN01<>/{}[]#$"
-                className="font-mono text-4xl font-black uppercase tracking-wide text-white md:text-7xl"
-                duration={1.35}
-                onScrambleComplete={finishIntro}
-                speed={0.025}
-              >
-                Welcome To VidChain
-              </TextScramble>
-              <p className="mt-5 font-mono text-xs uppercase tracking-[0.45em] text-white/45">Origin proof online</p>
-            </div>
-          </motion.div>
-        ) : null}
-      </AnimatePresence>
-
       <HeroSection />
-      <CinematicTransition kind="crack" />
-      <ProblemSection />
-      <CinematicTransition kind="vortex" />
-      <SolutionSection />
-      <CinematicTransition kind="stamp" />
-      <HowSection />
-      <CinematicTransition kind="matrix" />
-      <PHashSection />
-      <CinematicTransition kind="coin" />
-      <RoyaltiesSection />
-      <CinematicTransition kind="chain" />
-      <DisputeSection />
-      <CinematicTransition kind="supernova" />
-      <CTASection />
-      <WalletConnectPopup open={walletPopupOpen} onClose={() => setWalletPopupOpen(false)} />
+      <SectionSlot id="problem" loaded={loadedSections.includes("problem")} transition="crack"><ProblemSection /></SectionSlot>
+      <SectionSlot id="solution" loaded={loadedSections.includes("solution")} transition="vortex"><SolutionSection /></SectionSlot>
+      <SectionSlot id="how" loaded={loadedSections.includes("how")} transition="stamp"><HowSection /></SectionSlot>
+      <SectionSlot id="phash" loaded={loadedSections.includes("phash")} transition="matrix"><PHashSection /></SectionSlot>
+      <SectionSlot id="dispute" loaded={loadedSections.includes("dispute")} transition="chain"><DisputeSection /></SectionSlot>
+      <SectionSlot id="cta" loaded={loadedSections.includes("cta")} transition="supernova"><CTASection /></SectionSlot>
+      {!entryRevealed ? <EntryExperience onReveal={revealHome} /> : null}
     </main>
+  );
+}
+
+function SectionSlot({ children, id, loaded, transition }: { children: ReactNode; id: SectionId; loaded: boolean; transition: "chain" | "crack" | "matrix" | "stamp" | "supernova" | "vortex" }) {
+  return (
+    <>
+      {loaded ? <CinematicTransition kind={transition} /> : <div aria-hidden className="home-transition-placeholder" />}
+      {loaded ? children : <section aria-hidden className={cn("section home-section-placeholder", `playful-${id}`)} id={id} />}
+    </>
   );
 }
 
 function HeroSection() {
   return (
-    <section className="section playful-section playful-hero relative min-h-screen overflow-hidden px-4 py-20" id="hero">
+    <section className="section hero-section playful-section playful-hero relative min-h-screen overflow-hidden px-4 py-20" id="hero">
+      <div className="hero-grid" />
+      <HeroOrbs />
       <StarField />
       <div className="relative z-10 mx-auto grid min-h-[calc(100vh-10rem)] max-w-6xl items-center gap-10 lg:grid-cols-[0.95fr_1.05fr]">
         <ScrollReveal>
@@ -199,21 +154,17 @@ function HeroSection() {
             </TextScramble>
             <span className="block text-zinc-300">Own Your Story</span>
           </h1>
-          <p className="mt-6 max-w-xl text-lg leading-8 text-zinc-300">Decentralized video ownership on Solana for Indonesian creators who publish faster than credit travels.</p>
+          <p className="mt-6 max-w-xl text-lg leading-8 text-zinc-300">A simple way for Indonesian creators to prove a video is theirs before it gets copied.</p>
           <div className="mt-9 flex flex-col gap-4 sm:flex-row">
             <MagneticLink
               className="group inline-flex h-14 items-center justify-center gap-3 rounded-full bg-emerald-300 px-7 text-sm font-black text-black shadow-[0_0_70px_rgba(20,241,149,0.28)] transition hover:scale-105"
-              href={routes.register}
-              onClick={(event) => {
-                event.preventDefault();
-                window.dispatchEvent(new Event("vidchain:wallet-popup"));
-              }}
+              href={routes.dashboard}
             >
               Protect My Video
               <ArrowRight size={18} />
             </MagneticLink>
             <MagneticLink className="inline-flex h-14 items-center justify-center gap-3 rounded-full border border-violet-300/45 px-7 text-sm font-black text-violet-100 transition hover:bg-white hover:text-black" href="#phash">
-              See Proof Tech
+              See How It Works
               <ScanSearch size={18} />
             </MagneticLink>
           </div>
@@ -221,6 +172,18 @@ function HeroSection() {
         <RobotHero />
       </div>
     </section>
+  );
+}
+
+function HeroOrbs() {
+  return (
+    <div aria-hidden className="hero-orbs">
+      <div className="orb orb-1" />
+      <div className="orb orb-2" />
+      <div className="orb orb-3" />
+      <div className="orb orb-4" />
+      <div className="orb orb-5" />
+    </div>
   );
 }
 
@@ -309,7 +272,7 @@ function RobotHero() {
       <AnimatePresence>
         {minted ? (
           <motion.div animate={{ opacity: 1, scale: 1 }} className="absolute bottom-10 left-1/2 z-40 -translate-x-1/2 rounded-full bg-emerald-300 px-5 py-3 text-sm font-black text-black" exit={{ opacity: 0, scale: 0.8 }} initial={{ opacity: 0, scale: 0.8 }}>
-            {minted} minted
+            {minted} protected
           </motion.div>
         ) : null}
       </AnimatePresence>
@@ -428,11 +391,11 @@ function SolutionSection() {
   useEffect(() => clearStageTimers, [clearStageTimers]);
 
   return (
-    <StorySection eyebrow="The solution" id="solution" tone="green" title="VidChain locks ownership on-chain. Permanently.">
+    <StorySection eyebrow="The fix" id="solution" tone="green" title="VidChain saves proof people can check later.">
       <div className="grid gap-8 lg:grid-cols-[0.85fr_1.15fr] lg:items-center">
         <ScrollReveal>
           <GuardianMini />
-          <p className="mt-6 max-w-xl text-lg leading-8 text-zinc-300">One video. One mint. A public certificate binds wallet, timestamp, SHA-256, pHash, and Solana proof.</p>
+          <p className="mt-6 max-w-xl text-lg leading-8 text-zinc-300">Upload one video and get a public proof page with the owner, time, file fingerprint, and Solana record.</p>
           <CursorGlow className="mt-6 rounded-2xl border border-emerald-200/15 bg-black/60 p-4 font-mono text-sm text-emerald-100">
             <Typewriter text="sha256: 4f8a91bc9d1c77aa0e5b... anchored_to_solana" />
           </CursorGlow>
@@ -442,8 +405,8 @@ function SolutionSection() {
             <div className="grid min-h-[12rem] place-items-center rounded-3xl border border-dashed border-emerald-200/25 bg-emerald-300/[0.04] text-center">
               <div>
                 <Upload className="mx-auto text-emerald-200" size={34} />
-                <p className="mt-3 font-black">Drop anything here to mint it</p>
-                <p className="mt-2 text-sm text-zinc-500">The demo will scan, hash, fingerprint, and mint a fake certificate.</p>
+                <p className="mt-3 font-black">Drop a video here to protect it</p>
+                <p className="mt-2 text-sm text-zinc-500">The demo checks the file, creates a fingerprint, and makes a sample proof page.</p>
                 <motion.p animate={{ x: [0, 12, 0] }} className="mt-4 font-mono text-xs font-black uppercase tracking-[0.22em] text-emerald-200" transition={{ duration: 1.4, repeat: Infinity }}>
                   Drop image or wait for auto-demo
                 </motion.p>
@@ -451,15 +414,15 @@ function SolutionSection() {
             </div>
             <motion.div className="absolute bottom-5 left-1/2 w-72 -translate-x-1/2 cursor-grab rounded-3xl border border-white/10 bg-white/[0.06] p-4 backdrop-blur-xl active:cursor-grabbing" drag dragConstraints={{ bottom: 20, left: -140, right: 140, top: -250 }}>
               {stage > 0 ? <span className="absolute right-4 top-4 z-10 rounded-full bg-emerald-300 px-3 py-1 text-[10px] font-black text-black">RECEIVED</span> : null}
-              {preview ? <img alt="Mint preview" className="h-36 w-full rounded-2xl object-cover" src={preview} /> : <div className="grid h-36 place-items-center rounded-2xl bg-[radial-gradient(circle,rgba(153,69,255,0.25),rgba(2,6,23,0.9))]"><Fingerprint className="text-emerald-200" size={42} />{autoDemo ? <span className="absolute top-24 text-xs font-black text-white/70">Demo video</span> : null}</div>}
-              <p className="mt-4 font-mono text-xs uppercase tracking-[0.22em] text-zinc-500">Mint stage {stage}/5</p>
+              {preview ? <img alt="Proof preview" className="h-36 w-full rounded-2xl object-cover" src={preview} /> : <div className="grid h-36 place-items-center rounded-2xl bg-[radial-gradient(circle,rgba(153,69,255,0.25),rgba(2,6,23,0.9))]"><Fingerprint className="text-emerald-200" size={42} />{autoDemo ? <span className="absolute top-24 text-xs font-black text-white/70">Demo video</span> : null}</div>}
+              <p className="mt-4 font-mono text-xs uppercase tracking-[0.22em] text-zinc-500">Proof step {stage}/5</p>
               <div className="mt-2 h-2 overflow-hidden rounded-full bg-white/10">
                 <motion.div animate={{ width: `${stage * 20}%` }} className="h-full bg-emerald-300 shadow-[0_0_24px_rgba(20,241,149,0.8)]" />
               </div>
               {stage >= 2 ? (
                 <div className="mt-3 rounded-2xl border border-emerald-200/15 bg-black/60 p-3 font-mono text-[10px] leading-5 text-emerald-100">
                   <p>{stage >= 2 ? "ok sha256: 4f8a91bc9d1c77aa" : "..."}</p>
-                  <p>{stage >= 3 ? "ok phash: 1101001110010110" : "generating fingerprint..."}</p>
+                  <p>{stage >= 3 ? "ok visual match: 1101001110010110" : "creating video fingerprint..."}</p>
                   <p>{stage >= 4 ? "writing to Solana..." : "analyzing pixels..."}</p>
                 </div>
               ) : null}
@@ -467,7 +430,7 @@ function SolutionSection() {
                 <div>
                   <motion.p animate={{ scale: [0.85, 1.08, 1], rotate: [-4, 2, 0] }} className="mt-4 rounded-full bg-emerald-300 px-4 py-2 text-center text-xs font-black text-black">PROTECTED</motion.p>
                   <button className="mt-3 w-full rounded-full border border-white/10 px-4 py-2 text-xs font-black text-white/80 transition hover:bg-white hover:text-black" onClick={() => { clearStageTimers(); setPreview(null); setStage(0); setAutoDemo(false); }} type="button">
-                    Mint Another
+                    Protect Another
                   </button>
                 </div>
               ) : null}
@@ -483,13 +446,13 @@ function SolutionSection() {
 function HowSection() {
   const [active, setActive] = useState<number | null>(null);
   const cards = [
-    { title: "Connect Wallet", body: "Connect Phantom. No username. No password.", icon: <WalletCards /> },
-    { title: "Upload & Mint", body: "Your video is fingerprinted and minted as an NFT.", icon: <Upload /> },
-    { title: "Own It Forever", body: "Permanent. Tamper-proof. Publicly verifiable.", icon: <Stamp /> }
+    { title: "Connect Your Account", body: "Use Google or a wallet. No long setup needed.", icon: <WalletCards /> },
+    { title: "Upload Your Video", body: "VidChain creates a unique file fingerprint and proof page.", icon: <Upload /> },
+    { title: "Keep Proof Ready", body: "Anyone can check the proof link when ownership is questioned.", icon: <Stamp /> }
   ];
 
   return (
-    <StorySection eyebrow="Three steps to forever" id="how" tone="purple" title="Connect. Fingerprint. Mint forever.">
+    <StorySection eyebrow="Three easy steps" id="how" tone="purple" title="Connect. Upload. Keep proof ready.">
       <div className="grid gap-8">
         <div className="relative grid gap-5 lg:grid-cols-3">
           <div className="pointer-events-none absolute left-[16%] right-[16%] top-1/2 hidden h-px bg-gradient-to-r from-zinc-700 via-violet-400 to-emerald-300 lg:block" />
@@ -521,7 +484,7 @@ function PHashSection() {
   const [scanned, setScanned] = useState(false);
 
   return (
-    <StorySection eyebrow="The forensics lab" id="phash" tone="cyan" title="Even re-encoded theft gets caught.">
+    <StorySection eyebrow="Copy check" id="phash" tone="cyan" title="Even edited copies can still be found.">
       <CursorGlow className="relative overflow-hidden rounded-[2rem] border border-cyan-200/15 bg-black/70 p-5">
         <MatrixRain />
         <div className="relative grid gap-5 md:grid-cols-2">
@@ -531,7 +494,7 @@ function PHashSection() {
                 <FileVideo className={index === 0 ? "text-cyan-100" : "text-red-200"} size={58} />
               </div>
               <h3 className="mt-5 text-2xl font-black">{label}</h3>
-              <p className="mt-2 font-mono text-xs uppercase tracking-[0.2em] text-zinc-500">{scanned ? `SHA ${index === 0 ? "OK" : "FAIL"} / pHash MATCH` : "Waiting for scan"}</p>
+              <p className="mt-2 font-mono text-xs uppercase tracking-[0.2em] text-zinc-500">{scanned ? `File ${index === 0 ? "OK" : "CHANGED"} / Visual match found` : "Waiting for scan"}</p>
               {scanned ? <motion.div animate={{ x: ["-20%", "120%"] }} className="absolute left-0 top-0 h-full w-24 bg-gradient-to-r from-transparent via-emerald-200/24 to-transparent" transition={{ duration: 0.9, repeat: 2 }} /> : null}
             </CursorGlow>
           ))}
@@ -551,54 +514,24 @@ function PHashSection() {
   );
 }
 
-function RoyaltiesSection() {
-  const [coins, setCoins] = useState(0);
-  const [paid, setPaid] = useState(false);
-
-  return (
-    <StorySection eyebrow="Solana wallet speed" id="royalties" tone="gold" title="How fast is a Solana wallet?">
-      <CursorGlow className="relative min-h-[34rem] overflow-hidden rounded-[2rem] border border-yellow-200/15 bg-black/65 p-5">
-        {Array.from({ length: 10 }, (_, index) => (
-          <motion.button animate={{ y: [-80, 520], rotate: [0, 360] }} className="absolute top-0 z-20 grid h-10 w-10 place-items-center rounded-full bg-yellow-200 text-[10px] font-black text-black shadow-[0_0_28px_rgba(250,204,21,0.4)]" key={index} onClick={() => setCoins((value) => value + 1)} style={{ left: `${6 + index * 9}%` }} transition={{ delay: index * 0.35, duration: 5 + (index % 3), ease: "linear", repeat: Infinity }} type="button" whileTap={{ scale: 1.45 }}>
-            NFT
-          </motion.button>
-        ))}
-        <div className="relative z-10 grid gap-5 md:grid-cols-2">
-          {["Creator", "Buyer"].map((label, index) => (
-            <CursorGlow className="rounded-[2rem] border border-white/10 bg-white/[0.05] p-5 backdrop-blur-xl" key={label}>
-              <p className="font-mono text-xs uppercase tracking-[0.24em] text-zinc-500">{label} wallet</p>
-              <p className="mt-5 text-4xl font-black">{index === 0 ? `${coins + (paid ? 1 : 0)} NFTs ready` : paid ? "NFT received" : "Ready"}</p>
-              {index === 1 ? <button className="mt-8 rounded-full bg-emerald-300 px-5 py-3 text-sm font-black text-black" onClick={() => setPaid(true)} type="button">Transfer NFT</button> : null}
-            </CursorGlow>
-          ))}
-        </div>
-        <motion.div animate={paid ? { x: ["72vw", "16vw"], y: [0, -80, 0], opacity: [1, 1, 0] } : { opacity: 0 }} className="absolute left-0 top-1/2 z-20 grid h-16 w-16 place-items-center rounded-full bg-yellow-200 text-black shadow-[0_0_70px_rgba(250,204,21,0.55)]">
-          <Coins />
-        </motion.div>
-        <p className="absolute bottom-5 left-5 rounded-full border border-yellow-200/20 bg-yellow-200/10 px-4 py-2 text-sm font-black text-yellow-100">{coins >= 10 ? "Wallet speed unlocked" : `Collected: ${coins} NFT signals / Transfer preview: 400ms`}</p>
-      </CursorGlow>
-    </StorySection>
-  );
-}
-
 function DisputeSection() {
   const [caught, setCaught] = useState(false);
 
   return (
-    <StorySection eyebrow="Dispute system" id="dispute" tone="red" title="File a dispute on-chain. Build reputation.">
+    <StorySection eyebrow="Report copied videos" id="dispute" tone="red" title="Show your proof when someone steals your work.">
       <CursorGlow className="relative min-h-[34rem] overflow-hidden rounded-[2rem] border border-red-200/15 bg-black/70 p-5">
         <motion.button animate={caught ? { x: 240, scale: [1, 1.16, 1] } : { x: [0, 520, 0], y: [0, -18, 0] }} className={cn("absolute left-6 top-16 z-20 grid h-24 w-24 place-items-center rounded-3xl border text-red-100", caught ? "border-red-200 bg-red-500/35" : "border-white/10 bg-red-500/12")} onClick={() => setCaught(true)} transition={{ duration: caught ? 0.7 : 6, repeat: caught ? 0 : Infinity }} type="button">
           <Flag size={34} />
         </motion.button>
         <CursorGlow className="ml-auto max-w-xl rounded-3xl border border-white/10 bg-white/[0.04] p-5">
-          <p className="font-mono text-xs uppercase tracking-[0.24em] text-zinc-500">Live blockchain ledger</p>
-          {(caught ? ["10:42 | thief wallet | dispute filed | -1 reputation", "10:42 | creator wallet | verified proof | +1 creator", "10:43 | vidchain | evidence locked | public"] : ["waiting for dispute target", "creator certificate ready", "click the moving thief"]).map((line, index) => (
+          <p className="font-mono text-xs uppercase tracking-[0.24em] text-zinc-500">Live proof log</p>
+          {(caught ? ["10:42 | copied video | report sent | risk marked", "10:42 | creator proof | checked and matched", "10:43 | vidchain | evidence saved | public"] : ["waiting for copied video", "creator proof is ready", "click the moving report flag"]).map((line, index) => (
             <motion.p animate={{ opacity: [0.45, 1, 0.45] }} className="mt-4 font-mono text-sm text-cyan-100" key={line} transition={{ delay: index * 0.22, duration: 2.3, repeat: Infinity }}>
               {">"} {line}
             </motion.p>
           ))}
           <div className="mt-8 grid gap-4">
-            <ReputationBar label="Thief" value={caught ? 10 : 50} tone="red" />
+            <ReputationBar label="Copier" value={caught ? 10 : 50} tone="red" />
             <ReputationBar label="Creator" value={caught ? 95 : 70} tone="green" />
           </div>
         </CursorGlow>
@@ -645,11 +578,11 @@ function SpeedChallenge() {
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_72%_18%,rgba(20,241,149,0.14),transparent_28%)]" />
       <div className="relative flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
-          <p className="font-mono text-xs font-black uppercase tracking-[0.28em] text-violet-200">Wallet speed challenge</p>
-          <h3 className="mt-2 text-3xl font-black">Move an NFT file into a Solana wallet</h3>
+          <p className="font-mono text-xs font-black uppercase tracking-[0.28em] text-violet-200">Proof speed check</p>
+          <h3 className="mt-2 text-3xl font-black">Save ownership proof to a wallet</h3>
         </div>
         <motion.button animate={{ boxShadow: ["0 0 0 rgba(153,69,255,0)", "0 0 44px rgba(153,69,255,0.45)", "0 0 0 rgba(153,69,255,0)"] }} className="rounded-full bg-white px-6 py-3 text-sm font-black text-black" onClick={start} transition={{ duration: 1.6, repeat: Infinity }} type="button">
-          Start Move
+          Start Check
         </motion.button>
       </div>
       <div className="relative mt-6 grid gap-4 md:grid-cols-2">
@@ -677,16 +610,16 @@ function SpeedChallenge() {
         </div>
         <div className="rounded-3xl border border-emerald-200/20 bg-emerald-300/[0.06] p-5">
           <div className="flex items-center justify-between gap-3">
-            <p className="font-black text-emerald-100">Solana wallet proof move</p>
+            <p className="font-black text-emerald-100">Wallet proof update</p>
             <motion.span animate={running ? { x: [0, 8, 0], scale: [1, 1.22, 1] } : undefined} className="text-2xl" transition={{ duration: 0.4, repeat: running && !solanaDone ? Infinity : 0 }}>
-              NFT
+              PROOF
             </motion.span>
           </div>
           <div className="relative mt-5 flex items-center gap-3">
-            <span className="grid h-12 w-12 place-items-center rounded-2xl border border-emerald-200/25 bg-emerald-300/10 text-xs font-black">NFT</span>
+            <span className="grid h-12 w-12 place-items-center rounded-2xl border border-emerald-200/25 bg-emerald-300/10 text-xs font-black">PROOF</span>
             <div className="h-px flex-1 bg-emerald-200/25" />
             <span className="grid h-12 w-12 place-items-center rounded-2xl border border-emerald-200/25 bg-emerald-300/10 text-xs font-black">WALLET</span>
-            {running ? <motion.span animate={{ left: ["3rem", "calc(100% - 6rem)"], opacity: [0, 1, 0] }} className="absolute top-3 grid h-6 w-10 place-items-center rounded bg-emerald-300 text-[10px] font-black text-black" transition={{ duration: 0.4, ease: "easeOut" }}>NFT</motion.span> : null}
+            {running ? <motion.span animate={{ left: ["3rem", "calc(100% - 6rem)"], opacity: [0, 1, 0] }} className="absolute top-3 grid h-6 w-12 place-items-center rounded bg-emerald-300 text-[10px] font-black text-black" transition={{ duration: 0.4, ease: "easeOut" }}>PROOF</motion.span> : null}
           </div>
           <div className="mt-5 h-4 overflow-hidden rounded-full bg-white/10">
             <motion.div animate={{ width: running ? "100%" : "0%" }} className="h-full rounded-full bg-emerald-300 shadow-[0_0_24px_rgba(20,241,149,0.8)]" transition={{ duration: 0.4, ease: "easeOut" }} />
@@ -694,10 +627,10 @@ function SpeedChallenge() {
           <AnimatePresence>
             {solanaDone ? (
               <motion.p animate={{ opacity: 1, scale: 1 }} className="mt-3 text-lg font-black text-emerald-200" exit={{ opacity: 0 }} initial={{ opacity: 0, scale: 0.8 }}>
-                NFT moved. Proof updated in 400ms.
+                Proof saved in 400ms.
               </motion.p>
             ) : (
-              <p className="mt-3 text-sm text-zinc-500">Writing wallet ownership state...</p>
+              <p className="mt-3 text-sm text-zinc-500">Saving ownership proof...</p>
             )}
           </AnimatePresence>
         </div>
@@ -738,12 +671,12 @@ function SpotTheFakeGame() {
           <p className="font-mono text-xs font-black uppercase tracking-[0.28em] text-cyan-200">Spot the fake</p>
           <h3 className="mt-2 text-3xl font-black">Can you tell which clip is original?</h3>
         </div>
-        <p className="rounded-full border border-cyan-200/20 px-4 py-2 text-sm font-black text-cyan-100">{complete ? "pHash got all 3 right" : `Round ${round + 1}/3 - ${current.difficulty}`}</p>
+        <p className="rounded-full border border-cyan-200/20 px-4 py-2 text-sm font-black text-cyan-100">{complete ? "VidChain found all 3 copies" : `Round ${round + 1}/3 - ${current.difficulty}`}</p>
       </div>
       {complete ? (
         <motion.div animate={{ opacity: 1, y: 0 }} className="mt-6 rounded-3xl border border-emerald-200/20 bg-emerald-300/[0.08] p-5" initial={{ opacity: 0, y: 18 }}>
           <p className="text-3xl font-black">{score}/3 correct</p>
-          <p className="mt-2 text-zinc-300">VidChain pHash matched all three in 50ms, including the hard one humans barely notice.</p>
+          <p className="mt-2 text-zinc-300">VidChain matched all three in 50ms, including the hard one humans barely notice.</p>
           <button className="mt-5 rounded-full bg-cyan-100 px-5 py-3 text-sm font-black text-black" onClick={() => { setRound(0); setScore(0); setPicked(null); }} type="button">
             Play Again
           </button>
@@ -841,13 +774,13 @@ function JudgeMode() {
       ) : (
         <>
           <div className="mt-6 grid gap-4 lg:grid-cols-[1fr_1.1fr_1fr]">
-            <EvidenceCard date={current.creatorDate} label="Creator claim" status="NFT certificate present" />
+            <EvidenceCard date={current.creatorDate} label="Creator claim" status="Proof page present" />
             <div className="rounded-3xl border border-white/10 bg-white/[0.035] p-5">
               <p className="font-mono text-xs uppercase tracking-[0.22em] text-zinc-500">{current.difficulty} case</p>
               <h4 className="mt-3 text-2xl font-black">{current.title}</h4>
               <div className="mt-5 h-2 rounded-full bg-gradient-to-r from-emerald-300 via-white to-red-300" />
               <div className="mt-3 flex justify-between text-xs text-zinc-500"><span>{current.creatorDate}</span><span>{current.thiefDate}</span></div>
-              <p className="mt-5 font-mono text-xs leading-6 text-cyan-100">hash: 7f83b... vs a2f91...<br />pHash: visual match confirmed</p>
+              <p className="mt-5 font-mono text-xs leading-6 text-cyan-100">file check: 7f83b... vs a2f91...<br />visual match confirmed</p>
             </div>
             <EvidenceCard date={current.thiefDate} label="Thief defense" status="No certificate" />
           </div>
@@ -883,11 +816,16 @@ function EvidenceCard({ date, label, status }: { date: string; label: string; st
 }
 
 function CTASection() {
-  const [clicked, setClicked] = useState(false);
-
   return (
-    <section className="section playful-section playful-cta relative min-h-screen overflow-hidden px-4 py-24" id="cta">
+    <section className="section cta-section playful-section playful-cta relative min-h-screen overflow-hidden px-4 py-24" id="cta">
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(153,69,255,0.26),transparent_42%)]" />
+      <div aria-hidden className="cta-rings">
+        <span className="ring" />
+        <span className="ring" />
+        <span className="ring" />
+        <span className="ring" />
+        <span className="ring" />
+      </div>
       <motion.div animate={{ scale: [0, 2.8], opacity: [0.7, 0] }} className="absolute left-1/2 top-1/2 h-52 w-52 -translate-x-1/2 -translate-y-1/2 rounded-full border border-emerald-200/50" transition={{ duration: 2.8, repeat: Infinity }} />
       <div className="relative z-10 mx-auto grid min-h-[calc(100vh-12rem)] max-w-5xl place-items-center text-center">
         <ScrollReveal>
@@ -897,14 +835,9 @@ function CTASection() {
           <div className="mt-10 flex flex-col justify-center gap-4 sm:flex-row">
             <MagneticLink
               className="rounded-full bg-emerald-300 px-8 py-4 font-black text-black shadow-[0_0_70px_rgba(20,241,149,0.28)] transition"
-              href={routes.register}
-              onClick={(event) => {
-                event.preventDefault();
-                setClicked(true);
-                window.dispatchEvent(new Event("vidchain:wallet-popup"));
-              }}
+              href={routes.dashboard}
             >
-              {clicked ? "Protected!" : "Protect My Video"}
+              Protect My Video
             </MagneticLink>
             <MagneticLink className="rounded-full border border-violet-300/45 px-8 py-4 font-black text-violet-100 transition hover:bg-white hover:text-black" href={routes.verify}>
               Read the Docs
@@ -926,7 +859,7 @@ function StorySection({ id, eyebrow, title, tone, children }: { id: SectionId; e
   }[tone];
 
   return (
-    <section className={cn("section playful-section relative min-h-screen overflow-hidden border-t border-white/10 bg-[#0A0A0F] px-4 py-24", `playful-${id}`)} id={id}>
+    <section className={cn("section playful-section relative min-h-screen overflow-hidden border-t border-white/10 bg-[#0A0A0F] px-4 py-24", `playful-${id}`, `${id === "how" ? "howitworks" : id}-section`)} id={id}>
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_24%_22%,rgba(153,69,255,0.16),transparent_30%),radial-gradient(circle_at_78%_70%,rgba(20,241,149,0.1),transparent_34%)]" />
       <div className="relative z-10 mx-auto max-w-6xl">
         <ScrollReveal>
@@ -936,122 +869,6 @@ function StorySection({ id, eyebrow, title, tone, children }: { id: SectionId; e
         <div className="mt-12">{children}</div>
       </div>
     </section>
-  );
-}
-
-function WalletConnectPopup({ open, onClose }: { onClose: () => void; open: boolean }) {
-  const [selected, setSelected] = useState<string | null>(null);
-  const [connected, setConnected] = useState(false);
-  const wallets = [
-    { accent: "bg-violet-400", name: "Phantom", origin: "from-left" },
-    { accent: "bg-zinc-200", name: "Backpack", origin: "from-top" },
-    { accent: "bg-orange-300", name: "Solflare", origin: "from-right" }
-  ];
-
-  useEffect(() => {
-    if (!open) {
-      setSelected(null);
-      setConnected(false);
-      return;
-    }
-    const close = (event: KeyboardEvent) => {
-      if (event.key === "Escape") onClose();
-    };
-    window.addEventListener("keydown", close);
-    return () => window.removeEventListener("keydown", close);
-  }, [onClose, open]);
-
-  const connect = (wallet: string) => {
-    setSelected(wallet);
-    window.setTimeout(() => setConnected(true), 1800);
-  };
-
-  return (
-    <AnimatePresence>
-      {open ? (
-        <motion.div
-          animate={{ opacity: 1 }}
-          className="fixed inset-0 z-[120] grid place-items-center bg-black/90 px-4 backdrop-blur-xl"
-          exit={{ opacity: 0 }}
-          initial={{ opacity: 0 }}
-          onMouseDown={(event) => {
-            if (event.target === event.currentTarget) onClose();
-          }}
-        >
-          <motion.div
-            animate={{ borderRadius: "0px", inset: 0 }}
-            className="pointer-events-none fixed bg-violet-600/35"
-            initial={{ borderRadius: "999px", bottom: "44%", left: "44%", right: "44%", top: "44%" }}
-            transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
-          />
-          <motion.div
-            animate={{ opacity: 1, rotateX: 0, scale: 1, y: 0 }}
-            className="relative w-full max-w-4xl overflow-hidden rounded-[2rem] border border-white/14 bg-[#080712]/95 p-6 shadow-[0_0_140px_rgba(153,69,255,0.28)]"
-            exit={{ opacity: 0, rotateX: 72, scale: 0.82, y: 60 }}
-            initial={{ opacity: 0, rotateX: -38, scale: 0.76, y: 40 }}
-            style={{ transformStyle: "preserve-3d" }}
-            transition={{ duration: 0.55, ease: [0.22, 1, 0.36, 1] }}
-          >
-            <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(20,241,149,0.14),transparent_44%)]" />
-            <div className="relative flex items-start justify-between gap-4">
-              <div>
-                <p className="font-mono text-xs font-black uppercase tracking-[0.36em] text-emerald-200">Wallet connect</p>
-                <h3 className="mt-3 text-4xl font-black">Choose your weapon</h3>
-                <p className="mt-3 max-w-xl text-sm leading-6 text-zinc-400">Pick a wallet to enter the proof room. This demo simulates the connection with cinematic feedback.</p>
-              </div>
-              <button className="rounded-full border border-white/12 px-4 py-2 text-sm font-black text-white/70 transition hover:bg-white hover:text-black" onClick={onClose} type="button">
-                Close
-              </button>
-            </div>
-
-            <div className="relative mt-8 grid gap-4 md:grid-cols-3">
-              {wallets.map((wallet, index) => (
-                <motion.button
-                  animate={{ opacity: selected && selected !== wallet.name ? 0.36 : 1, scale: selected === wallet.name ? 1.07 : 1 }}
-                  className="group relative min-h-56 overflow-hidden rounded-3xl border border-white/10 bg-white/[0.045] p-5 text-left backdrop-blur-xl"
-                  initial={{ opacity: 0, x: wallet.origin === "from-left" ? -80 : wallet.origin === "from-right" ? 80 : 0, y: wallet.origin === "from-top" ? -70 : 0 }}
-                  key={wallet.name}
-                  onClick={() => connect(wallet.name)}
-                  transition={{ delay: index * 0.12, duration: 0.48, ease: [0.22, 1, 0.36, 1] }}
-                  type="button"
-                  whileHover={{ rotateX: 8, rotateY: index === 1 ? 0 : index === 0 ? -10 : 10, y: -8 }}
-                >
-                  <span className={cn("grid h-14 w-14 place-items-center rounded-2xl text-black transition group-hover:rotate-[360deg]", wallet.accent)}>
-                    <WalletCards />
-                  </span>
-                  <h4 className="mt-8 text-2xl font-black">{wallet.name}</h4>
-                  <p className="mt-3 text-sm leading-6 text-zinc-400">3D tilt, inner glow, and one-click proof workspace access.</p>
-                  {selected === wallet.name ? (
-                    <div className="absolute inset-x-5 bottom-5">
-                      <p className="text-xs font-black text-emerald-200">{connected ? "Connected" : "Requesting permission..."}</p>
-                      <div className="mt-2 h-2 overflow-hidden rounded-full bg-white/10">
-                        <motion.div animate={{ width: connected ? "100%" : ["0%", "72%"] }} className="h-full bg-emerald-300 shadow-[0_0_24px_rgba(20,241,149,0.8)]" transition={{ duration: 1.6 }} />
-                      </div>
-                    </div>
-                  ) : null}
-                </motion.button>
-              ))}
-            </div>
-
-            <AnimatePresence>
-              {connected ? (
-                <motion.div animate={{ opacity: 1, y: 0 }} className="mt-6 rounded-3xl border border-emerald-200/20 bg-emerald-200/10 p-5" exit={{ opacity: 0 }} initial={{ opacity: 0, y: 18 }}>
-                  <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-                    <div>
-                      <p className="text-xl font-black text-emerald-100">Connected. Proof room unlocked.</p>
-                      <p className="mt-1 text-sm text-zinc-400">Next step: upload an original video and mint your certificate.</p>
-                    </div>
-                    <Link className="rounded-full bg-emerald-300 px-5 py-3 text-sm font-black text-black" href={routes.register}>
-                      Continue
-                    </Link>
-                  </div>
-                </motion.div>
-              ) : null}
-            </AnimatePresence>
-          </motion.div>
-        </motion.div>
-      ) : null}
-    </AnimatePresence>
   );
 }
 
@@ -1099,469 +916,6 @@ function DepthParallax() {
   );
 }
 
-function GlobalCanvas() {
-  const canvasRef = useRef<HTMLCanvasElement | null>(null);
-
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    const context = canvas?.getContext("2d");
-    if (!canvas || !context) return;
-
-    let width = 0;
-    let height = 0;
-    let animation = 0;
-    let visible = true;
-    let lastScrollY = window.scrollY;
-    let scrollVelocity = 0;
-    const mouse = { x: -9999, y: -9999 };
-    let gravityWell = { x: window.innerWidth * 0.5, y: window.innerHeight * 0.45 };
-    let connectionTimer = 0;
-    const activeConnections: { a: number; b: number; life: number }[] = [];
-    const particles = Array.from({ length: window.innerWidth < 768 ? 60 : 120 }, (_, index) => ({
-      color: index % 10 < 7 ? "#9945FF" : "#14F195",
-      phase: index * 0.73,
-      size: 2 + (index % 4),
-      vx: ((index % 9) - 4) * 0.08,
-      vy: ((index % 7) - 3) * 0.08,
-      x: Math.random() * window.innerWidth,
-      y: Math.random() * window.innerHeight
-    }));
-    const ink: { x: number; y: number; life: number; size: number; hue: number }[] = [];
-    const shocks: { x: number; y: number; life: number; color: string; delay: number }[] = [];
-    const gridLights = new Map<string, number>();
-    const ledgerTypes = ["transfer", "protected", "dispute", "transfer", "transfer", "protected", "transfer", "transfer"];
-    const ledgerRows = Array.from({ length: window.innerWidth < 768 ? 15 : 35 }, (_, index) => {
-      const kind = ledgerTypes[index % ledgerTypes.length] ?? "transfer";
-      const hashA = `${(0x4f8a + index * 193).toString(16)}${(0x91bc + index * 41).toString(16)}`.slice(0, 7);
-      const hashB = `${(0x9d1c + index * 89).toString(16)}${(0x77aa + index * 31).toString(16)}`.slice(0, 7);
-      const minute = String((12 + index * 3) % 60).padStart(2, "0");
-      const second = String((8 + index * 7) % 60).padStart(2, "0");
-      const sol = ((index % 9) * 0.27 + 0.11).toFixed(2);
-      const data = kind === "dispute" ? `${hashA}... ! DISPUTE FILED  Dec 12 14:${minute}:${second}` : kind === "protected" ? `${hashA}... -> PROTECTED  VIDEO NFT  Dec 12 14:${minute}:${second}` : `${hashA}... -> ${hashB}...  ${sol} SOL  Dec 12 14:${minute}:${second}`;
-      return { data, kind, opacity: 0.05 + (index % 4) * 0.01, y: index * 24 };
-    });
-    const warningTriangles = Array.from({ length: window.innerWidth < 768 ? 4 : 8 }, (_, index) => ({
-      phase: index * 0.8,
-      rotation: index * 23,
-      size: 80 + (index % 5) * 28,
-      x: (index * 137) % Math.max(1, window.innerWidth),
-      y: (index * 91) % Math.max(1, window.innerHeight)
-    }));
-    const ctaStars = Array.from({ length: window.innerWidth < 768 ? 60 : 150 }, (_, index) => ({
-      phase: index * 0.37,
-      size: index % 7 === 0 ? 1.8 : 1,
-      x: (index * 83) % Math.max(1, window.innerWidth),
-      y: ((index * 47) % Math.max(1, window.innerHeight * 0.74)) * 0.85
-    }));
-    const indonesiaCities = [
-      { name: "Jakarta", phase: 0, size: 8, x: 0.31, y: 0.82 },
-      { name: "Surabaya", phase: 0.5, size: 5, x: 0.42, y: 0.81 },
-      { name: "Medan", phase: 1, size: 5, x: 0.18, y: 0.78 },
-      { name: "Bandung", phase: 1.5, size: 4, x: 0.3, y: 0.83 },
-      { name: "Bali", phase: 2, size: 4, x: 0.46, y: 0.835 },
-      { name: "Makassar", phase: 2.3, size: 4, x: 0.62, y: 0.8 },
-      { name: "Jayapura", phase: 2.9, size: 4, x: 0.88, y: 0.78 },
-      { name: "Padang", phase: 3.2, size: 3, x: 0.24, y: 0.805 },
-      { name: "Balikpapan", phase: 3.8, size: 3, x: 0.54, y: 0.775 },
-      { name: "Manado", phase: 4.2, size: 3, x: 0.69, y: 0.75 },
-      { name: "Lombok", phase: 4.7, size: 3, x: 0.5, y: 0.84 },
-      { name: "Ambon", phase: 5.1, size: 3, x: 0.73, y: 0.8 }
-    ];
-
-    const resize = () => {
-      const ratio = Math.min(window.devicePixelRatio || 1, window.innerWidth < 768 ? 1.15 : 1.4);
-      width = window.innerWidth;
-      height = window.innerHeight;
-      canvas.width = width * ratio;
-      canvas.height = height * ratio;
-      canvas.style.width = `${width}px`;
-      canvas.style.height = `${height}px`;
-      context.setTransform(ratio, 0, 0, ratio, 0, 0);
-    };
-
-    const visibility = () => {
-      visible = document.visibilityState === "visible";
-      if (visible) {
-        lastScrollY = window.scrollY;
-        animation = window.requestAnimationFrame(draw);
-      }
-    };
-
-    const move = (event: MouseEvent) => {
-      const speed = Math.hypot(event.movementX, event.movementY);
-      mouse.x = event.clientX;
-      mouse.y = event.clientY;
-      ink.push({ hue: (event.clientX + event.clientY) % 360, life: 1, size: Math.min(9, 2 + speed * 0.18), x: event.clientX, y: event.clientY });
-      const gridStep = window.innerWidth < 768 ? 80 : 70;
-      const gridX = Math.round(event.clientX / gridStep);
-      const gridY = Math.round(event.clientY / gridStep);
-      gridLights.set(`${gridX}:${gridY}`, 1);
-      [[1, 0], [-1, 0], [0, 1], [0, -1]].forEach(([x, y]) => gridLights.set(`${gridX + x}:${gridY + y}`, 0.58));
-      if (ink.length > 180) ink.splice(0, ink.length - 180);
-    };
-
-    const click = (event: MouseEvent) => {
-      shocks.push({ color: "#9945FF", delay: 0, life: 1, x: event.clientX, y: event.clientY });
-      shocks.push({ color: "#14F195", delay: 0.12, life: 1, x: event.clientX, y: event.clientY });
-      shocks.push({ color: "#ffffff", delay: 0.24, life: 1, x: event.clientX, y: event.clientY });
-      particles
-        .map((particle, index) => ({ distance: Math.hypot(particle.x - event.clientX, particle.y - event.clientY), index }))
-        .sort((a, b) => a.distance - b.distance)
-        .slice(0, 20)
-        .forEach(({ index }) => {
-          const particle = particles[index];
-          if (!particle) return;
-          const angle = Math.atan2(particle.y - event.clientY, particle.x - event.clientX);
-          particle.vx += Math.cos(angle) * 8;
-          particle.vy += Math.sin(angle) * 8;
-        });
-    };
-
-    const getSectionProgress = (id: SectionId) => {
-      const element = document.getElementById(id);
-      if (!element) return 0;
-      const rect = element.getBoundingClientRect();
-      const range = height + rect.height;
-      return Math.max(0, Math.min(1, (height - rect.top) / Math.max(1, range)));
-    };
-
-    const updateBackgroundColor = () => {
-      const scrollCenter = window.scrollY + height * 0.5;
-      let currentIndex = 0;
-      for (let index = 0; index < sections.length; index += 1) {
-        const element = document.getElementById(sections[index]?.id ?? "hero");
-        if (element && element.offsetTop <= scrollCenter) currentIndex = index;
-      }
-      const current = sections[currentIndex];
-      const next = sections[Math.min(sections.length - 1, currentIndex + 1)];
-      if (!current || !next) return;
-      const currentElement = document.getElementById(current.id);
-      const nextElement = document.getElementById(next.id);
-      const colorA = sectionColorRgb[current.id];
-      const colorB = sectionColorRgb[next.id];
-      if (!currentElement || !nextElement) {
-        document.documentElement.style.setProperty("--vidchain-bg", `rgb(${colorA[0]},${colorA[1]},${colorA[2]})`);
-        return;
-      }
-      const distance = Math.max(1, nextElement.offsetTop - currentElement.offsetTop);
-      const t = Math.max(0, Math.min(1, (scrollCenter - currentElement.offsetTop) / distance));
-      const red = Math.round(colorA[0] + (colorB[0] - colorA[0]) * t);
-      const green = Math.round(colorA[1] + (colorB[1] - colorA[1]) * t);
-      const blue = Math.round(colorA[2] + (colorB[2] - colorA[2]) * t);
-      document.documentElement.style.setProperty("--vidchain-bg", `rgb(${red},${green},${blue})`);
-    };
-
-    const drawDisputeLayer = (time: number, progress: number) => {
-      if (progress <= 0 || progress >= 1) return;
-      const intensity = progress > 0.12 && progress < 0.88 ? 1 : 0.35;
-      context.save();
-      context.globalAlpha = 0.16 * intensity;
-      context.fillStyle = "#120810";
-      context.fillRect(0, 0, width, height);
-      warningTriangles.forEach((warning) => {
-        const x = warning.x + Math.sin(time * 0.00025 + warning.phase) * 42;
-        const y = warning.y + Math.cos(time * 0.0002 + warning.phase) * 34;
-        const radius = warning.size * (0.5 + progress * 0.25);
-        context.save();
-        context.translate(x, y);
-        context.rotate((warning.rotation + time * 0.004) * (Math.PI / 180));
-        context.globalAlpha = (0.04 + progress * 0.02) * intensity;
-        context.strokeStyle = "#ff4444";
-        context.lineWidth = 2;
-        context.beginPath();
-        context.moveTo(0, -radius * 0.56);
-        context.lineTo(radius * 0.58, radius * 0.48);
-        context.lineTo(-radius * 0.58, radius * 0.48);
-        context.closePath();
-        context.stroke();
-        context.font = `${Math.max(34, radius * 0.55)}px monospace`;
-        context.textAlign = "center";
-        context.textBaseline = "middle";
-        context.fillStyle = "#ff4444";
-        context.fillText("!", 0, radius * 0.1);
-        context.restore();
-      });
-      context.font = "10px monospace";
-      context.textAlign = "left";
-      context.textBaseline = "alphabetic";
-      ledgerRows.forEach((row, index) => {
-        row.y -= 0.33 + scrollVelocity * 0.065;
-        if (row.y < -24) row.y = height + 24;
-        const highlight = Math.sin(time * 0.002 + index) > 0.965 ? 0.18 : 0;
-        context.globalAlpha = (row.opacity + highlight) * intensity;
-        context.fillStyle = row.kind === "dispute" ? "#ff4444" : row.kind === "protected" ? "#14F195" : "#ffffff";
-        context.shadowBlur = highlight > 0 ? 16 : 0;
-        context.shadowColor = row.kind === "dispute" ? "#ff4444" : "#14F195";
-        context.fillText(row.data, 18 + (index % 3) * 8, row.y);
-      });
-      context.restore();
-    };
-
-    const drawCtaLayer = (time: number, progress: number) => {
-      if (progress <= 0 || progress >= 1) return;
-      context.save();
-      context.globalAlpha = 0.22;
-      context.fillStyle = "#040408";
-      context.fillRect(0, 0, width, height);
-      ctaStars.forEach((star) => {
-        const twinkle = 0.3 + 0.6 * (0.5 + 0.5 * Math.sin(time * 0.001 + star.phase));
-        context.globalAlpha = twinkle * Math.min(1, progress * 2);
-        context.fillStyle = "#ffffff";
-        context.beginPath();
-        context.arc(star.x, star.y, star.size, 0, Math.PI * 2);
-        context.fill();
-      });
-
-      const mapProgress = Math.max(0, Math.min(1, (progress - 0.25) / 0.35));
-      const lightProgress = Math.max(0, Math.min(1, (progress - 0.5) / 0.35));
-      const beamProgress = Math.max(0, Math.min(1, (progress - 0.68) / 0.24));
-      const baseY = height * 0.78;
-      const mapWidth = width * 0.88;
-      const mapLeft = width * 0.06;
-      const scaleY = height * 0.18;
-      context.globalAlpha = mapProgress * 0.68;
-      context.fillStyle = "rgba(20,10,40,0.8)";
-      context.strokeStyle = "rgba(153,69,255,0.35)";
-      context.lineWidth = 2;
-      context.shadowBlur = 20 * mapProgress;
-      context.shadowColor = "#9945FF";
-      context.beginPath();
-      context.moveTo(mapLeft + mapWidth * 0.1, baseY + scaleY * 0.25);
-      context.bezierCurveTo(mapLeft + mapWidth * 0.16, baseY + scaleY * 0.1, mapLeft + mapWidth * 0.23, baseY + scaleY * 0.08, mapLeft + mapWidth * 0.3, baseY + scaleY * 0.18);
-      context.bezierCurveTo(mapLeft + mapWidth * 0.42, baseY + scaleY * 0.02, mapLeft + mapWidth * 0.52, baseY + scaleY * 0.15, mapLeft + mapWidth * 0.62, baseY + scaleY * 0.08);
-      context.bezierCurveTo(mapLeft + mapWidth * 0.74, baseY + scaleY * 0.0, mapLeft + mapWidth * 0.86, baseY + scaleY * 0.08, mapLeft + mapWidth * 0.94, baseY + scaleY * 0.02);
-      context.lineTo(mapLeft + mapWidth * 0.96, baseY + scaleY * 0.26);
-      context.bezierCurveTo(mapLeft + mapWidth * 0.8, baseY + scaleY * 0.3, mapLeft + mapWidth * 0.67, baseY + scaleY * 0.22, mapLeft + mapWidth * 0.54, baseY + scaleY * 0.32);
-      context.bezierCurveTo(mapLeft + mapWidth * 0.38, baseY + scaleY * 0.25, mapLeft + mapWidth * 0.24, baseY + scaleY * 0.42, mapLeft + mapWidth * 0.1, baseY + scaleY * 0.31);
-      context.closePath();
-      context.fill();
-      context.stroke();
-
-      if (beamProgress > 0) {
-        const beam = context.createLinearGradient(width * 0.5, height * 0.18, width * 0.5, baseY);
-        beam.addColorStop(0, "rgba(153,69,255,0)");
-        beam.addColorStop(0.45, `rgba(153,69,255,${0.18 * beamProgress})`);
-        beam.addColorStop(1, `rgba(20,241,149,${0.38 * beamProgress})`);
-        context.globalAlpha = 1;
-        context.fillStyle = beam;
-        context.beginPath();
-        context.moveTo(width * 0.5 - 34 * beamProgress, height * 0.18);
-        context.lineTo(width * 0.5 + 34 * beamProgress, height * 0.18);
-        context.lineTo(width * 0.5 + 5, baseY + 18);
-        context.lineTo(width * 0.5 - 5, baseY + 18);
-        context.closePath();
-        context.fill();
-      }
-
-      indonesiaCities.forEach((city, index) => {
-        const cityProgress = Math.max(0, Math.min(1, lightProgress * 3 - index * 0.12));
-        if (cityProgress <= 0) return;
-        const x = city.x * width;
-        const y = city.y * height;
-        const pulse = 0.5 + 0.5 * Math.sin(time * 0.0008 + city.phase);
-        const gradient = context.createRadialGradient(x, y, 0, x, y, city.size * 4);
-        gradient.addColorStop(0, "rgba(20,241,149,0.82)");
-        gradient.addColorStop(1, "rgba(20,241,149,0)");
-        context.globalAlpha = (0.35 + pulse * 0.45) * cityProgress;
-        context.fillStyle = gradient;
-        context.beginPath();
-        context.arc(x, y, city.size * 4, 0, Math.PI * 2);
-        context.fill();
-        context.globalAlpha = (0.75 + pulse * 0.25) * cityProgress;
-        context.fillStyle = "#14F195";
-        context.beginPath();
-        context.arc(x, y, city.size, 0, Math.PI * 2);
-        context.fill();
-      });
-
-      if (beamProgress > 0.75) {
-        for (let index = 0; index < 8; index += 1) {
-          const offset = ((time * 0.03 + index * 84) % Math.max(1, height * 0.62));
-          context.globalAlpha = 0.28;
-          context.fillStyle = index % 2 ? "#14F195" : "#9945FF";
-          context.fillRect(width * 0.5 - 12 + (index % 3 - 1) * 14, baseY - offset, 20, 12);
-        }
-      }
-      context.restore();
-    };
-
-    const draw = () => {
-      if (!visible) return;
-      const time = performance.now();
-      context.clearRect(0, 0, width, height);
-      const scrollDelta = window.scrollY - lastScrollY;
-      scrollVelocity += (Math.abs(scrollDelta) - scrollVelocity) * 0.08;
-      lastScrollY = window.scrollY;
-      updateBackgroundColor();
-      connectionTimer += 1;
-      if (connectionTimer > 240) {
-        connectionTimer = 0;
-        for (let index = 0; index < 3; index += 1) {
-          activeConnections.push({ a: Math.floor(Math.random() * particles.length), b: Math.floor(Math.random() * particles.length), life: 1 });
-        }
-      }
-      if (connectionTimer === 1) {
-        gravityWell = { x: Math.random() * width, y: Math.random() * height };
-      }
-
-      const gridStep = window.innerWidth < 768 ? 80 : 70;
-      const litKeys = new Set(gridLights.keys());
-      context.globalAlpha = 0.05;
-      context.fillStyle = "#ffffff";
-      for (let gx = 0; gx <= Math.ceil(width / gridStep); gx += 1) {
-        for (let gy = 0; gy <= Math.ceil(height / gridStep); gy += 1) {
-          const key = `${gx}:${gy}`;
-          if (litKeys.has(key)) continue;
-          context.fillRect(gx * gridStep, gy * gridStep - (window.scrollY % gridStep) * 0.14, 1.2, 1.2);
-        }
-      }
-      for (const [key, glowValue] of gridLights) {
-          const [gxRaw, gyRaw] = key.split(":");
-          const gx = Number(gxRaw);
-          const gy = Number(gyRaw);
-          if (!Number.isFinite(gx) || !Number.isFinite(gy)) continue;
-          const glow = glowValue;
-          const x = gx * gridStep;
-          const y = gy * gridStep - (window.scrollY % gridStep) * 0.14;
-          context.globalAlpha = glow * 0.48;
-          context.fillStyle = "#9945FF";
-          context.beginPath();
-          context.arc(x, y, 1.2 + glow * 3, 0, Math.PI * 2);
-          context.fill();
-          if (glow > 0.16) {
-            context.strokeStyle = `rgba(153, 69, 255, ${glow * 0.18})`;
-            context.beginPath();
-            context.moveTo(x - gridStep, y);
-            context.lineTo(x + gridStep, y);
-            context.moveTo(x, y - gridStep);
-            context.lineTo(x, y + gridStep);
-            context.stroke();
-          }
-          const nextGlow = glow * 0.95;
-          if (nextGlow < 0.02) gridLights.delete(key);
-          else gridLights.set(key, nextGlow);
-      }
-      context.globalAlpha = 1;
-
-      particles.forEach((particle, index) => {
-        const wobble = Math.sin(time * 0.001 + particle.phase) * 0.025;
-        const dx = particle.x - mouse.x;
-        const dy = particle.y - mouse.y;
-        const distance = Math.hypot(dx, dy) || 1;
-        if (distance < 150) {
-          const force = (150 - distance) / 150;
-          particle.vx += (dx / distance) * force * 2.5;
-          particle.vy += (dy / distance) * force * 2.5;
-        } else {
-          particle.vx += (gravityWell.x - particle.x) * 0.000004;
-          particle.vy += (gravityWell.y - particle.y) * 0.000004;
-        }
-        particle.vx += Math.cos(particle.phase) * wobble + (Math.random() - 0.5) * scrollVelocity * 0.002;
-        particle.vy += Math.sin(particle.phase) * wobble + (Math.random() - 0.5) * scrollVelocity * 0.002;
-        particle.vx *= 0.982;
-        particle.vy *= 0.982;
-        particle.x += particle.vx;
-        particle.y += particle.vy;
-        if (particle.x < -30) particle.x = width + 30;
-        if (particle.x > width + 30) particle.x = -30;
-        if (particle.y < -30) particle.y = height + 30;
-        if (particle.y > height + 30) particle.y = -30;
-
-        context.globalAlpha = 0.38;
-        context.fillStyle = particle.color;
-        if (index % 5 === 0) {
-          context.shadowBlur = 10;
-          context.shadowColor = particle.color;
-        } else {
-          context.shadowBlur = 0;
-        }
-        context.beginPath();
-        context.arc(particle.x, particle.y, particle.size, 0, Math.PI * 2);
-        context.fill();
-        if (index % 17 === 0) {
-          context.globalAlpha = 0.08;
-          context.beginPath();
-          context.arc(particle.x, particle.y, particle.size * 5, 0, Math.PI * 2);
-          context.fill();
-        }
-      });
-
-      for (let index = activeConnections.length - 1; index >= 0; index -= 1) {
-        const connection = activeConnections[index];
-        if (!connection) continue;
-        connection.life -= 0.012;
-        const a = particles[connection.a];
-        const b = particles[connection.b];
-        if (!a || !b || connection.life <= 0) {
-          activeConnections.splice(index, 1);
-          continue;
-        }
-        context.globalAlpha = Math.max(0, connection.life) * 0.45;
-        context.strokeStyle = index % 2 ? "#14F195" : "#9945FF";
-        context.lineWidth = 1.2;
-        context.beginPath();
-        context.moveTo(a.x, a.y);
-        context.lineTo(b.x, b.y);
-        context.stroke();
-      }
-
-      for (let index = ink.length - 1; index >= 0; index -= 1) {
-        const stamp = ink[index];
-        if (!stamp) continue;
-        stamp.life -= 0.045;
-        if (stamp.life <= 0) {
-          ink.splice(index, 1);
-          continue;
-        }
-        context.globalAlpha = stamp.life * 0.6;
-        context.fillStyle = `hsl(${stamp.hue}, 96%, 66%)`;
-        context.beginPath();
-        context.arc(stamp.x, stamp.y, stamp.size, 0, Math.PI * 2);
-        context.fill();
-      }
-
-      for (let index = shocks.length - 1; index >= 0; index -= 1) {
-        const shock = shocks[index];
-        if (!shock) continue;
-        shock.delay -= 0.02;
-        if (shock.delay > 0) continue;
-        shock.life -= 0.022;
-        if (shock.life <= 0) {
-          shocks.splice(index, 1);
-          continue;
-        }
-        context.globalAlpha = shock.life;
-        context.strokeStyle = shock.color;
-        context.lineWidth = index % 3 === 0 ? 2 : 1;
-        context.beginPath();
-        context.arc(shock.x, shock.y, (1 - shock.life) * 150, 0, Math.PI * 2);
-        context.stroke();
-      }
-      drawDisputeLayer(time, getSectionProgress("dispute"));
-      drawCtaLayer(time, getSectionProgress("cta"));
-      context.globalAlpha = 1;
-      context.shadowBlur = 0;
-      animation = window.requestAnimationFrame(draw);
-    };
-
-    resize();
-    draw();
-    window.addEventListener("resize", resize);
-    window.addEventListener("mousemove", move, { passive: true });
-    window.addEventListener("click", click);
-    document.addEventListener("visibilitychange", visibility);
-    return () => {
-      window.cancelAnimationFrame(animation);
-      window.removeEventListener("resize", resize);
-      window.removeEventListener("mousemove", move);
-      window.removeEventListener("click", click);
-      document.removeEventListener("visibilitychange", visibility);
-    };
-  }, []);
-
-  return <canvas aria-hidden className="pointer-events-none fixed inset-0 z-[1] opacity-80 mix-blend-screen" ref={canvasRef} />;
-}
-
 function LightBulbCursor() {
   const cursorRef = useRef<HTMLDivElement | null>(null);
   const followerRef = useRef<HTMLDivElement | null>(null);
@@ -1571,7 +925,6 @@ function LightBulbCursor() {
     const cursor = cursorRef.current;
     const follower = followerRef.current;
     if (!cursor) return;
-    let frame = 0;
     let mouseX = 0;
     let mouseY = 0;
     let followerX = 0;
@@ -1597,14 +950,13 @@ function LightBulbCursor() {
       followerY += (mouseY - followerY) * 0.12;
       cursor.style.transform = `translate3d(${mouseX - 10}px, ${mouseY - 10}px, 0)`;
       if (follower) follower.style.transform = `translate3d(${followerX - 4}px, ${followerY - 4}px, 0)`;
-      frame = window.requestAnimationFrame(animate);
     };
-    animate();
+    MasterLoop.add("vidchain-cursor", animate, 0);
     window.addEventListener("mousemove", move, { passive: true });
     window.addEventListener("mousedown", down);
     window.addEventListener("mouseup", up);
     return () => {
-      window.cancelAnimationFrame(frame);
+      MasterLoop.remove("vidchain-cursor");
       window.removeEventListener("mousemove", move);
       window.removeEventListener("mousedown", down);
       window.removeEventListener("mouseup", up);
@@ -1633,13 +985,11 @@ function LightBulbCursor() {
 function MagneticLink({
   href,
   className,
-  children,
-  onClick
+  children
 }: {
   href: string;
   className: string;
   children: ReactNode;
-  onClick?: (event: ReactMouseEvent<HTMLAnchorElement>) => void;
 }) {
   const ref = useRef<HTMLAnchorElement | null>(null);
   const handlePointerMove = (event: PointerEvent<HTMLAnchorElement>) => {
@@ -1655,7 +1005,7 @@ function MagneticLink({
     if (element) element.style.transform = "translate3d(0,0,0)";
   };
   return (
-    <Link className={className} href={href} onClick={onClick} onPointerLeave={reset} onPointerMove={handlePointerMove} ref={ref}>
+    <Link className={className} href={href} onPointerLeave={reset} onPointerMove={handlePointerMove} ref={ref}>
       {children}
     </Link>
   );
@@ -1663,7 +1013,7 @@ function MagneticLink({
 
 function ScrollReveal({ children, className }: { children: ReactNode; className?: string }) {
   return (
-    <motion.div className={className} initial={{ opacity: 0, y: 42, scale: 0.97 }} transition={{ duration: 0.78, ease: [0.22, 1, 0.36, 1] }} viewport={{ amount: 0.28, once: false }} whileInView={{ opacity: 1, y: 0, scale: 1 }}>
+    <motion.div className={className} initial={{ opacity: 0, y: 28, scale: 0.98 }} transition={{ duration: 0.62, ease: [0.22, 1, 0.36, 1] }} viewport={{ amount: 0.24, once: true }} whileInView={{ opacity: 1, y: 0, scale: 1 }}>
       {children}
     </motion.div>
   );
@@ -1690,7 +1040,7 @@ function CinematicTransition({ kind }: { kind: "crack" | "vortex" | "stamp" | "m
       {kind === "crack" ? <svg className="absolute inset-0 h-full w-full" viewBox="0 0 1000 220"><path className="crack-line" d="M500 0 L486 48 L525 82 L470 112 L536 145 L500 220" /></svg> : null}
       {kind === "vortex" ? <motion.div animate={{ rotate: 360, scale: [0.6, 1.5, 0.6] }} className="absolute left-1/2 top-1/2 h-64 w-64 -translate-x-1/2 -translate-y-1/2 rounded-full border border-dashed border-emerald-200/30" transition={{ duration: 7, repeat: Infinity, ease: "linear" }} /> : null}
       {kind === "stamp" ? <motion.div animate={{ y: [0, 18, 0], rotate: [-4, 4, -4] }} className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-2xl border-4 border-violet-400/70 px-8 py-4 text-2xl font-black uppercase text-violet-200" transition={{ duration: 2.8, repeat: Infinity }}>Verified on Solana</motion.div> : null}
-      {kind === "matrix" ? <div className="absolute inset-0 matrix-text">0101 af90 b7c3 91bc phash 77aa</div> : null}
+      {kind === "matrix" ? <div className="absolute inset-0 matrix-text">0101 af90 b7c3 91bc copy check 77aa</div> : null}
       {kind === "coin" ? <div className="absolute inset-0 flex items-center justify-center gap-3 text-yellow-200">{Array.from({ length: 18 }, (_, index) => <motion.span animate={{ y: [0, -30, 0], rotate: [0, 360] }} key={index} transition={{ delay: index * 0.06, duration: 2, repeat: Infinity }}>SOL</motion.span>)}</div> : null}
       {kind === "chain" ? <div className="absolute inset-0 flex items-center justify-center gap-2">{Array.from({ length: 11 }, (_, index) => <motion.span animate={{ y: [index % 2 ? -8 : 8, 0, index % 2 ? -8 : 8] }} className="h-10 w-16 rounded-full border-4 border-cyan-100/25" key={index} transition={{ delay: index * 0.08, duration: 2.4, repeat: Infinity }} />)}</div> : null}
       {kind === "supernova" ? <motion.div animate={{ scale: [0, 7], opacity: [1, 0] }} className="absolute left-1/2 top-1/2 h-20 w-20 -translate-x-1/2 -translate-y-1/2 rounded-full bg-white" transition={{ duration: 2.4, repeat: Infinity }} /> : null}
@@ -1779,7 +1129,7 @@ function PixelHash({ active }: { active: boolean }) {
 }
 
 function MatrixRain() {
-  return <div className="pointer-events-none absolute inset-0 opacity-20 matrix-text">010101 af09 bc72 91bc 77aa feed cafe 4f8a phash sha256</div>;
+  return <div className="pointer-events-none absolute inset-0 opacity-20 matrix-text">010101 af09 bc72 91bc 77aa feed cafe 4f8a copy check file check</div>;
 }
 
 function Meter({ label, value, width }: { label: string; value: string; width: string }) {
@@ -1809,3 +1159,4 @@ function ReputationBar({ label, value, tone }: { label: string; value: number; t
     </div>
   );
 }
+
