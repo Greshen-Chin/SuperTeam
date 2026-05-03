@@ -32,19 +32,14 @@ export async function requestDevnetAirdrop(address: string, lamports = 100_000_0
   return signature;
 }
 
-export type TransactionResult = {
+type TransactionMeta = {
   slot: number;
   transaction: { message: { accountKeys: string[] } };
-  meta: {
-    err: unknown;
-    preBalances: number[];
-    postBalances: number[];
-    logMessages?: string[];
-  } | null;
+  meta: { err: unknown } | null;
 } | null;
 
-export async function getTransaction(signature: string): Promise<TransactionResult> {
-  return rpc<TransactionResult>("getTransaction", [
+export async function getTransaction(signature: string): Promise<TransactionMeta> {
+  return rpc<TransactionMeta>("getTransaction", [
     signature,
     { encoding: "json", commitment: "confirmed", maxSupportedTransactionVersion: 0 }
   ]);
@@ -52,16 +47,4 @@ export async function getTransaction(signature: string): Promise<TransactionResu
 
 export function isMockSignature(signature: string): boolean {
   return signature.startsWith("demo_") || signature.startsWith("mock_");
-}
-
-export function getReceivedLamports(
-  tx: NonNullable<TransactionResult>,
-  recipientAddress: string
-): number {
-  const keys = tx.transaction.message.accountKeys;
-  const idx = keys.indexOf(recipientAddress);
-  if (idx === -1) return 0;
-  const pre = tx.meta?.preBalances[idx] ?? 0;
-  const post = tx.meta?.postBalances[idx] ?? 0;
-  return post - pre;
 }

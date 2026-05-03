@@ -1,33 +1,36 @@
-import { buildApp } from "./app.js";
+import Fastify from "fastify";
+import cors from "@fastify/cors";
+import multipart from "@fastify/multipart";
+import rateLimit from "@fastify/rate-limit";
 import { config } from "./config.js";
-import { migrate, requirePool } from "./db.js";
-import { createDisputeRepository } from "./repositories/dispute-repository.js";
+import { migrate } from "./db.js";
+import { registerRoutes } from "./routes.js";
 
-const app = await buildApp();
+const app = Fastify({
+  logger: true,
+  genReqId: () => `req_${Date.now()}_${Math.random().toString(16).slice(2)}`
+});
+
+await app.register(cors, {
+  origin: [config.frontendOrigin, "http://localhost:3000", "http://127.0.0.1:3000"],
+  credentials: true
+});
+await app.register(rateLimit, {
+  global: false,
+  keyGenerator: (req) => req.ip
+});
+await app.register(multipart, {
+  limits: {
+    fileSize: 250 * 1024 * 1024
+  }
+});
+await registerRoutes(app);
 
 try {
   await migrate();
 } catch (error) {
-  app.log.warn(
-    { error },
-    "PostgreSQL migration failed. Database-backed routes will return DATABASE_UNAVAILABLE until DATABASE_URL is valid."
-  );
+  app.log.warn({ error }, "PostgreSQL/Supabase migration failed. Database-backed auth will return DATABASE_UNAVAILABLE until DATABASE_URL is valid.");
 }
-
-// Expire open disputes whose response deadline has passed (runs every minute)
-setInterval(() => {
-  try {
-    const pool = requirePool();
-    createDisputeRepository(pool)
-      .expireOpenDisputes()
-      .then((n) => {
-        if (n > 0) app.log.info({ expired: n }, "dispute expiry job: marked disputes expired");
-      })
-      .catch((err) => app.log.warn({ err }, "dispute expiry job failed"));
-  } catch {
-    // DB not connected yet — skip silently
-  }
-}, 60_000);
 
 try {
   await app.listen({ host: config.host, port: config.port });

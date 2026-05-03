@@ -7,7 +7,6 @@ const schema = z.object({
   NEXT_PUBLIC_API_BASE_URL: z.string().url().default("http://localhost:4000"),
   NEXT_PUBLIC_WEB3AUTH_CLIENT_ID: z.string().default(""),
   NEXT_PUBLIC_WEB3AUTH_NETWORK: z.enum(["sapphire_devnet", "sapphire_mainnet"]).default("sapphire_devnet"),
-  NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID: z.string().default(""),
   NEXT_PUBLIC_USE_MOCK_API: z
     .enum(["true", "false"])
     .default("false")
@@ -27,7 +26,6 @@ export const env = schema.parse({
   NEXT_PUBLIC_API_BASE_URL: process.env.NEXT_PUBLIC_API_BASE_URL,
   NEXT_PUBLIC_WEB3AUTH_CLIENT_ID: process.env.NEXT_PUBLIC_WEB3AUTH_CLIENT_ID,
   NEXT_PUBLIC_WEB3AUTH_NETWORK: process.env.NEXT_PUBLIC_WEB3AUTH_NETWORK,
-  NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID: process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID,
   NEXT_PUBLIC_USE_MOCK_API: process.env.NEXT_PUBLIC_USE_MOCK_API,
   NEXT_PUBLIC_USE_MOCK_CHAIN: process.env.NEXT_PUBLIC_USE_MOCK_CHAIN,
 });
