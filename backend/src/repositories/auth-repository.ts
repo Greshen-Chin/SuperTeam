@@ -1,9 +1,9 @@
 import type { Pool } from "pg";
+
 export type User = {
   id: string;
   email: string | null;
-  googleEmail: string | null;
-  googleLinkedAt: string | null;
+  displayName: string | null;
   walletAddress: string | null;
   walletLinkedAt: string | null;
   createdAt: string;
@@ -11,19 +11,6 @@ export type User = {
 
 export function createAuthRepository(pool: Pool) {
   return {
-    async createPasswordUser(input: { id: string; email: string; passwordHash: string }): Promise<User> {
-      const result = await pool.query(
-        "insert into users (id, email, password_hash) values ($1, $2, $3) returning *",
-        [input.id, normalizeEmail(input.email), input.passwordHash]
-      );
-      return mapUser(result.rows[0]);
-    },
-
-    async findByEmail(email: string): Promise<(User & { passwordHash: string | null }) | null> {
-      const result = await pool.query("select * from users where lower(email) = $1", [normalizeEmail(email)]);
-      return result.rows[0] ? mapUserWithPassword(result.rows[0]) : null;
-    },
-
     async findById(id: string): Promise<User | null> {
       const result = await pool.query("select * from users where id = $1", [id]);
       return result.rows[0] ? mapUser(result.rows[0]) : null;
@@ -34,44 +21,15 @@ export function createAuthRepository(pool: Pool) {
       return result.rows.map(mapUser);
     },
 
-    async upsertGoogleUser(input: { id: string; email: string; googleSub?: string | null }): Promise<User> {
-      const email = normalizeEmail(input.email);
-      const existing = await pool.query(
-        "select * from users where lower(email) = $1 or lower(google_email) = $1 or ($2::text is not null and google_sub = $2)",
-        [email, input.googleSub ?? null]
-      );
-      if (existing.rows[0]) return mapUser(existing.rows[0]);
-
-      const result = await pool.query(
-        "insert into users (id, email, google_sub, google_email, google_linked_at) values ($1, $2, $3, $2, now()) returning *",
-        [input.id, email, input.googleSub ?? null]
-      );
-      return mapUser(result.rows[0]);
-    },
-
-    async upsertWalletUser(input: { id: string; walletAddress: string }): Promise<User> {
+    async upsertWalletUser(input: { id: string; walletAddress: string; email?: string | null; displayName?: string | null }): Promise<User> {
       const address = normalizeAddress(input.walletAddress);
       const existing = await pool.query("select * from users where wallet_address = $1 or lower(wallet_address) = lower($1)", [address]);
       if (existing.rows[0]) return mapUser(existing.rows[0]);
 
       const result = await pool.query(
-        "insert into users (id, wallet_address, wallet_linked_at) values ($1, $2, now()) returning *",
-        [input.id, address]
+        "insert into users (id, wallet_address, wallet_linked_at, email, display_name) values ($1, $2, now(), $3, $4) returning *",
+        [input.id, address, input.email ?? null, input.displayName ?? null]
       );
-      return mapUser(result.rows[0]);
-    },
-
-    async linkGoogle(input: { userId: string; email: string; googleSub?: string | null }): Promise<User> {
-      const email = normalizeEmail(input.email);
-      const result = await pool.query(
-        "update users set google_email = $1, google_sub = coalesce($2, google_sub), google_linked_at = now(), email = coalesce(email, $1) where id = $3 returning *",
-        [email, input.googleSub ?? null, input.userId]
-      );
-
-      if (!result.rows[0]) {
-        throw new Error("User not found.");
-      }
-
       return mapUser(result.rows[0]);
     },
 
@@ -117,25 +75,13 @@ export function normalizeAddress(address: string) {
   return cleanAddress.toLowerCase().startsWith("0x") ? cleanAddress.toLowerCase() : cleanAddress;
 }
 
-export function normalizeEmail(email: string) {
-  return email.trim().toLowerCase();
-}
-
 function mapUser(row: Record<string, unknown>): User {
   return {
     id: String(row.id),
     email: row.email == null ? null : String(row.email),
-    googleEmail: row.google_email == null ? null : String(row.google_email),
-    googleLinkedAt: row.google_linked_at == null ? null : new Date(String(row.google_linked_at)).toISOString(),
+    displayName: row.display_name == null ? null : String(row.display_name),
     walletAddress: row.wallet_address == null ? null : String(row.wallet_address),
     walletLinkedAt: row.wallet_linked_at == null ? null : new Date(String(row.wallet_linked_at)).toISOString(),
     createdAt: new Date(String(row.created_at)).toISOString()
-  };
-}
-
-function mapUserWithPassword(row: Record<string, unknown>): User & { passwordHash: string | null } {
-  return {
-    ...mapUser(row),
-    passwordHash: row.password_hash == null ? null : String(row.password_hash)
   };
 }
