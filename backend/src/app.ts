@@ -59,7 +59,8 @@ export async function buildApp(opts: { logger?: boolean | object } = {}): Promis
   await app.register(cors, {
     origin: (origin, cb) => {
       const allowed = [config.frontendOrigin, "http://localhost:3000", "http://127.0.0.1:3000"];
-      if (!origin || allowed.includes(origin)) {
+      const isDevLocalhost = !!origin && /^http:\/\/(localhost|127\.0\.0\.1):\d+$/.test(origin);
+      if (!origin || allowed.includes(origin) || isDevLocalhost) {
         cb(null, true);
       } else {
         cb(new Error("Not allowed"), false);
