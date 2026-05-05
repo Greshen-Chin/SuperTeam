@@ -28,6 +28,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   return <AuthStateProvider>{children}</AuthStateProvider>;
 }
 
+function isUserClosedError(msg: string) {
+  const lower = msg.toLowerCase();
+  return lower.includes("user closed") || lower.includes("popup closed") || lower.includes("modal closed");
+}
+
 function AuthStateProvider({ children }: { children: ReactNode }) {
   const wallet = useVidchainWallet();
   const { getUserInfo } = useWeb3Auth();
@@ -60,7 +65,8 @@ function AuthStateProvider({ children }: { children: ReactNode }) {
     wallet
       .loginWithGoogle()
       .catch((err: unknown) => {
-        setError(err instanceof Error ? err.message : "Login gagal. Coba lagi.");
+        const msg = err instanceof Error ? err.message : String(err);
+        if (!isUserClosedError(msg)) setError(msg || "Login gagal. Coba lagi.");
       })
       .finally(() => setIsLoading(false));
   }, [wallet]);
@@ -71,7 +77,8 @@ function AuthStateProvider({ children }: { children: ReactNode }) {
     wallet
       .loginWithEmail()
       .catch((err: unknown) => {
-        setError(err instanceof Error ? err.message : "Login gagal. Coba lagi.");
+        const msg = err instanceof Error ? err.message : String(err);
+        if (!isUserClosedError(msg)) setError(msg || "Login gagal. Coba lagi.");
       })
       .finally(() => setIsLoading(false));
   }, [wallet]);

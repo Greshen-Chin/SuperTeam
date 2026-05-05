@@ -3,21 +3,21 @@
 import { useMemo, useState } from "react";
 import { registerProofOnChain } from "@/lib/blockchain-adapter";
 import { apiClient } from "@/lib/api-client";
+import { useAuth } from "@/context/AuthContext";
 import type { Fingerprint, Proof } from "@/shared/schemas";
 
-type RegisterState =
+export type RegisterState =
   | "idle"
   | "file_selected"
   | "fingerprinting"
-  | "ready_to_sign"
+  | "uploading"
   | "waiting_for_signature"
   | "creating_certificate"
   | "success"
   | "error";
 
-const demoCreatorWallet = "VcHn9E2NmF3uP8KoLq21xProofCreatorWalletSolana";
-
 export function useRegisterVideoFlow() {
+  const { publicAddress } = useAuth();
   const [state, setState] = useState<RegisterState>("idle");
   const [file, setFile] = useState<File | null>(null);
   const [title, setTitle] = useState("");
@@ -26,7 +26,10 @@ export function useRegisterVideoFlow() {
   const [proof, setProof] = useState<Proof | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const canCreateProof = useMemo(() => Boolean(file && title.trim()), [file, title]);
+  const canCreateProof = useMemo(
+    () => Boolean(file && title.trim() && publicAddress),
+    [file, title, publicAddress]
+  );
 
   function selectFile(nextFile: File) {
     setFile(nextFile);
@@ -36,20 +39,40 @@ export function useRegisterVideoFlow() {
     setState("file_selected");
   }
 
+  function reset() {
+    setFile(null);
+    setTitle("");
+    setCreatorHandle("");
+    setFingerprint(null);
+    setProof(null);
+    setError(null);
+    setState("idle");
+  }
+
   async function createProof() {
-    if (!file || !title.trim()) return;
+    if (!file || !title.trim() || !publicAddress) return;
 
     try {
       setError(null);
+
       setState("fingerprinting");
       const nextFingerprint = await apiClient.createFingerprint(file);
       setFingerprint(nextFingerprint);
+
+      setState("uploading");
+      let ipfsVideoUri: string | undefined;
+      try {
+        const upload = await apiClient.uploadFile(file);
+        ipfsVideoUri = upload.ipfsUrl;
+      } catch {
+        // Non-fatal — proceed without IPFS URI
+      }
 
       setState("waiting_for_signature");
       const proofId = `proof_${Date.now()}`;
       const onChainResult = await registerProofOnChain({
         proofId,
-        creatorWallet: demoCreatorWallet,
+        creatorWallet: publicAddress,
         sha256: nextFingerprint.sha256,
         fingerprintRoot: nextFingerprint.fingerprintRoot,
         metadataUri: `ipfs://metadata/${proofId}`
@@ -59,15 +82,17 @@ export function useRegisterVideoFlow() {
       const nextProof = await apiClient.registerProof({
         title: title.trim(),
         creatorHandle: creatorHandle.trim() || undefined,
-        creatorWallet: demoCreatorWallet,
+        creatorWallet: publicAddress,
         fingerprint: nextFingerprint,
-        solanaSignature: onChainResult.signature
+        solanaSignature: onChainResult.signature,
+        ipfsVideoUri
       });
 
       setProof(nextProof);
       setState("success");
-    } catch {
-      setError("Could not create proof. Please try again with another video.");
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Could not create proof. Please try again.";
+      setError(msg);
       setState("error");
     }
   }
@@ -81,10 +106,11 @@ export function useRegisterVideoFlow() {
     proof,
     error,
     canCreateProof,
+    publicAddress,
     selectFile,
     setTitle,
     setCreatorHandle,
-    createProof
+    createProof,
+    reset
   };
 }
-

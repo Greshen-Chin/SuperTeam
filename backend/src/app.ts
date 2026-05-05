@@ -57,8 +57,18 @@ export async function buildApp(opts: { logger?: boolean | object } = {}): Promis
   });
 
   await app.register(cors, {
-    origin: [config.frontendOrigin, "http://localhost:3000", "http://127.0.0.1:3000"],
-    credentials: true
+    origin: (origin, cb) => {
+      const allowed = [config.frontendOrigin, "http://localhost:3000", "http://127.0.0.1:3000"];
+      if (!origin || allowed.includes(origin)) {
+        cb(null, true);
+      } else {
+        cb(new Error("Not allowed"), false);
+      }
+    },
+    methods: ["GET", "HEAD", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization", "Accept", "Origin", "X-Api-Key"],
+    credentials: true,
+    optionsSuccessStatus: 204
   });
   await app.register(rateLimit, {
     global: false,

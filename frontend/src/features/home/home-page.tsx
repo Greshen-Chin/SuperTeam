@@ -1,7 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { memo, useCallback, useEffect, useRef, useState } from "react";
 import type { DragEvent, HTMLAttributes, PointerEvent, ReactNode } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { AnimatePresence, motion } from "framer-motion";
 import {
@@ -175,7 +176,7 @@ function HeroSection() {
   );
 }
 
-function HeroOrbs() {
+const HeroOrbs = memo(function HeroOrbs() {
   return (
     <div aria-hidden className="hero-orbs">
       <div className="orb orb-1" />
@@ -185,20 +186,22 @@ function HeroOrbs() {
       <div className="orb orb-5" />
     </div>
   );
-}
+});
 
 function RobotHero() {
-  const [look, setLook] = useState({ x: 0, y: 0 });
+  const pupil1Ref = useRef<HTMLSpanElement | null>(null);
+  const pupil2Ref = useRef<HTMLSpanElement | null>(null);
   const [dance, setDance] = useState(false);
   const [speech, setSpeech] = useState<string | null>(null);
   const [minted, setMinted] = useState<string | null>(null);
 
   useEffect(() => {
     const move = (event: MouseEvent) => {
-      setLook({
-        x: (event.clientX / window.innerWidth - 0.5) * 18,
-        y: (event.clientY / window.innerHeight - 0.5) * 14
-      });
+      const x = (event.clientX / window.innerWidth - 0.5) * 18 * 0.08;
+      const y = (event.clientY / window.innerHeight - 0.5) * 14 * 0.08;
+      const t = `translate(${x}px, ${y}px)`;
+      if (pupil1Ref.current) pupil1Ref.current.style.transform = t;
+      if (pupil2Ref.current) pupil2Ref.current.style.transform = t;
     };
     window.addEventListener("mousemove", move, { passive: true });
     const boredTimer = window.setTimeout(() => setSpeech("Ayo, lindungi videomu"), 30000);
@@ -231,9 +234,9 @@ function RobotHero() {
           transition={{ duration: dance ? 0.9 : 5, ease: "easeInOut", repeat: dance ? 0 : Infinity }}
         >
           <div className="absolute left-1/2 top-5 h-20 w-28 -translate-x-1/2 rounded-[1.6rem] border border-white/15 bg-white/[0.05]" />
-          {[-1, 1].map((side) => (
+          {[-1, 1].map((side, i) => (
             <span className={cn("absolute top-12 grid h-9 w-9 place-items-center rounded-full bg-cyan-100/12", side < 0 ? "left-16" : "right-16")} key={side}>
-              <span className="h-3.5 w-3.5 rounded-full bg-cyan-100 shadow-[0_0_22px_rgba(165,243,252,0.95)]" style={{ transform: `translate(${look.x * 0.08}px, ${look.y * 0.08}px)` }} />
+              <span ref={i === 0 ? pupil1Ref : pupil2Ref} className="h-3.5 w-3.5 rounded-full bg-cyan-100 shadow-[0_0_22px_rgba(165,243,252,0.95)]" />
             </span>
           ))}
           <motion.div animate={{ scale: [1, 1.12, 1] }} className="absolute left-1/2 top-32 grid h-16 w-16 -translate-x-1/2 place-items-center rounded-2xl bg-emerald-300 text-black shadow-[0_0_60px_rgba(20,241,149,0.45)]" transition={{ duration: 2.2, repeat: Infinity }}>
@@ -280,14 +283,19 @@ function RobotHero() {
   );
 }
 
-function ProblemSection() {
-  const [dropState, setDropState] = useState<"idle" | "safe" | "danger">("idle");
-  const [stolenCount, setStolenCount] = useState(1284);
-
+const StolenCounter = memo(function StolenCounter() {
+  const [count, setCount] = useState(1284);
   useEffect(() => {
-    const timer = window.setInterval(() => setStolenCount((value) => value + 7), 1200);
+    const timer = window.setInterval(() => setCount((v) => v + 7), 1200);
     return () => window.clearInterval(timer);
   }, []);
+  return (
+    <p className="mt-6 rounded-full border border-red-300/20 bg-red-500/10 px-4 py-3 text-sm font-black text-red-100">{count.toLocaleString()} videos stolen today</p>
+  );
+});
+
+function ProblemSection() {
+  const [dropState, setDropState] = useState<"idle" | "safe" | "danger">("idle");
 
   return (
     <StorySection eyebrow="The problem" id="problem" tone="red" title="Every day, creators lose their work to theft.">
@@ -306,7 +314,7 @@ function ProblemSection() {
               </CursorGlow>
             ))}
           </div>
-          <p className="mt-6 rounded-full border border-red-300/20 bg-red-500/10 px-4 py-3 text-sm font-black text-red-100">{stolenCount.toLocaleString()} videos stolen today</p>
+          <StolenCounter />
         </ScrollReveal>
         <ScrollReveal>
           <CursorGlow className="relative min-h-[32rem] overflow-hidden rounded-[2rem] border border-red-300/15 bg-black/60 p-5">
@@ -694,7 +702,7 @@ function SpotTheFakeGame() {
                 whileHover={{ scale: 1.015 }}
               >
                 <div className="relative h-52 overflow-hidden rounded-2xl bg-zinc-950">
-                  <img alt={side === "left" ? "Original video thumbnail" : "Re-encoded stolen copy thumbnail"} className={cn("h-full w-full object-cover transition duration-500", side === "right" && current.stolenClass)} src={current.image} />
+                  <Image alt={side === "left" ? "Original video thumbnail" : "Re-encoded stolen copy thumbnail"} className={cn("object-cover transition duration-500", side === "right" && current.stolenClass)} fill sizes="(max-width: 768px) 100vw, 50vw" src={current.image} />
                   <div className="absolute inset-0 bg-[linear-gradient(180deg,transparent_45%,rgba(0,0,0,0.72))]" />
                   {side === "right" ? <div className="absolute inset-0 bg-[repeating-linear-gradient(0deg,rgba(255,255,255,0.08)_0,rgba(255,255,255,0.08)_1px,transparent_1px,transparent_8px)] opacity-25" /> : null}
                   <div className="absolute left-4 top-4 rounded-full border border-white/25 bg-black/55 px-3 py-1 font-mono text-[10px] uppercase tracking-[0.18em] text-white/85">{side === "left" ? "Source upload" : "Repost copy"}</div>
@@ -802,7 +810,7 @@ function JudgeMode() {
   );
 }
 
-function EvidenceCard({ date, label, status }: { date: string; label: string; status: string }) {
+const EvidenceCard = memo(function EvidenceCard({ date, label, status }: { date: string; label: string; status: string }) {
   return (
     <div className="rounded-3xl border border-white/10 bg-white/[0.035] p-5">
       <div className="grid h-16 w-16 place-items-center rounded-2xl bg-white text-black">
@@ -813,7 +821,7 @@ function EvidenceCard({ date, label, status }: { date: string; label: string; st
       <p className="mt-3 text-sm text-zinc-400">{status}</p>
     </div>
   );
-}
+});
 
 function CTASection() {
   return (
@@ -879,34 +887,32 @@ function CursorGlow({
   style,
   ...props
 }: HTMLAttributes<HTMLDivElement> & { children: ReactNode }) {
-  const [point, setPoint] = useState({ x: 50, y: 50 });
+  const ref = useRef<HTMLDivElement | null>(null);
 
   const handlePointerMove = (event: PointerEvent<HTMLDivElement>) => {
     const rect = event.currentTarget.getBoundingClientRect();
-    setPoint({
-      x: ((event.clientX - rect.left) / rect.width) * 100,
-      y: ((event.clientY - rect.top) / rect.height) * 100
-    });
+    const x = ((event.clientX - rect.left) / rect.width) * 100;
+    const y = ((event.clientY - rect.top) / rect.height) * 100;
+    if (ref.current) {
+      ref.current.style.backgroundImage = `radial-gradient(circle at ${x}% ${y}%, rgba(255,255,255,0.16), rgba(153,69,255,0.09) 18%, transparent 44%)`;
+    }
     onPointerMove?.(event);
   };
 
   return (
     <div
+      ref={ref}
       className={cn("cursor-glow-card", className)}
       onPointerMove={handlePointerMove}
-      style={{
-        ...style,
-        backgroundImage: `radial-gradient(circle at ${point.x}% ${point.y}%, rgba(255,255,255,0.16), rgba(153,69,255,0.09) 18%, transparent 44%)`
-      }}
+      style={style}
       {...props}
     >
-      <span className="pointer-events-none absolute inset-0 opacity-0 transition duration-500 group-hover:opacity-100" />
       {children}
     </div>
   );
 }
 
-function DepthParallax() {
+const DepthParallax = memo(function DepthParallax() {
   return (
     <div aria-hidden className="pointer-events-none fixed inset-0 z-0 overflow-hidden">
       <div className="vidchain-blob vidchain-blob-one" />
@@ -914,7 +920,7 @@ function DepthParallax() {
       <div className="vidchain-blob vidchain-blob-three" />
     </div>
   );
-}
+});
 
 function LightBulbCursor() {
   const cursorRef = useRef<HTMLDivElement | null>(null);
@@ -1048,7 +1054,7 @@ function CinematicTransition({ kind }: { kind: "crack" | "vortex" | "stamp" | "m
   );
 }
 
-function PerchedRobot({ kind }: { kind: "chain" | "coin" | "crack" | "matrix" | "stamp" | "supernova" | "vortex" }) {
+const PerchedRobot = memo(function PerchedRobot({ kind }: { kind: "chain" | "coin" | "crack" | "matrix" | "stamp" | "supernova" | "vortex" }) {
   const left = {
     chain: "left-[69%]",
     coin: "left-[58%]",
@@ -1077,13 +1083,13 @@ function PerchedRobot({ kind }: { kind: "chain" | "coin" | "crack" | "matrix" | 
       <motion.div animate={{ scaleX: [0.7, 1, 0.7], opacity: [0.28, 0.6, 0.28] }} className="absolute bottom-1 left-1/2 h-2 w-24 -translate-x-1/2 rounded-full bg-emerald-200/50 blur-sm" transition={{ duration: 2.4, repeat: Infinity }} />
     </motion.div>
   );
-}
+});
 
-function StarField() {
+const StarField = memo(function StarField() {
   return <div className="pointer-events-none absolute inset-0 opacity-55 dot-grid" />;
-}
+});
 
-function GuardianMini({ large = false }: { large?: boolean }) {
+const GuardianMini = memo(function GuardianMini({ large = false }: { large?: boolean }) {
   return (
     <motion.div animate={{ y: [0, -12, 0], rotateY: [-7, 7, -7] }} className={cn("relative grid place-items-center", large ? "mx-auto h-44 w-44" : "h-28 w-28")} transition={{ duration: 5, repeat: Infinity, ease: "easeInOut" }}>
       <div className="absolute inset-0 rounded-full bg-violet-400/20 blur-3xl" />
@@ -1093,7 +1099,7 @@ function GuardianMini({ large = false }: { large?: boolean }) {
       <motion.div animate={{ rotate: 360 }} className="absolute h-full w-full rounded-full border border-dashed border-emerald-200/20" transition={{ duration: 24, repeat: Infinity, ease: "linear" }} />
     </motion.div>
   );
-}
+});
 
 function ShatterParticles() {
   return (
@@ -1108,7 +1114,7 @@ function ShatterParticles() {
 
 function Typewriter({ text }: { text: string }) {
   return (
-    <motion.span initial={{ opacity: 0 }} whileInView={{ opacity: 1 }} viewport={{ once: false }}>
+    <motion.span initial={{ opacity: 0 }} whileInView={{ opacity: 1 }} viewport={{ once: true }}>
       {text.split("").map((char, index) => (
         <motion.span initial={{ opacity: 0 }} key={`${char}-${index}`} transition={{ delay: index * 0.018 }} whileInView={{ opacity: 1 }}>
           {char}
@@ -1128,11 +1134,11 @@ function PixelHash({ active }: { active: boolean }) {
   );
 }
 
-function MatrixRain() {
+const MatrixRain = memo(function MatrixRain() {
   return <div className="pointer-events-none absolute inset-0 opacity-20 matrix-text">010101 af09 bc72 91bc 77aa feed cafe 4f8a copy check file check</div>;
-}
+});
 
-function Meter({ label, value, width }: { label: string; value: string; width: string }) {
+const Meter = memo(function Meter({ label, value, width }: { label: string; value: string; width: string }) {
   return (
     <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-4">
       <div className="flex items-center justify-between text-sm font-black">
@@ -1144,7 +1150,7 @@ function Meter({ label, value, width }: { label: string; value: string; width: s
       </div>
     </div>
   );
-}
+});
 
 function ReputationBar({ label, value, tone }: { label: string; value: number; tone: "red" | "green" }) {
   return (

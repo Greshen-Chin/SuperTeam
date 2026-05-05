@@ -9,6 +9,7 @@ export type RegisterProofInput = {
   creatorWallet: string;
   fingerprint: Fingerprint;
   solanaSignature: string;
+  ipfsVideoUri?: string;
 };
 
 type ApiResponse<T> = {
@@ -33,6 +34,23 @@ async function readApiResponse<T>(response: Response): Promise<T> {
 export const apiClient = {
   async createFingerprint(file: File): Promise<Fingerprint> {
     return createLocalFingerprint(file);
+  },
+
+  async uploadFile(file: File): Promise<{ ipfsUrl: string; gatewayUrl: string }> {
+    if (apiBaseUrl) {
+      const form = new FormData();
+      form.append("file", file, file.name);
+      const response = await fetch(`${apiBaseUrl}/api/upload`, {
+        method: "POST",
+        headers: authHeaders(),
+        body: form
+      });
+      return readApiResponse<{ ipfsUrl: string; gatewayUrl: string }>(response);
+    }
+
+    await new Promise((resolve) => setTimeout(resolve, 800));
+    const cid = `bafybei${Date.now().toString(36)}`;
+    return { ipfsUrl: `ipfs://${cid}`, gatewayUrl: `https://ipfs.io/ipfs/${cid}` };
   },
 
   async registerProof(input: RegisterProofInput): Promise<Proof> {
@@ -62,6 +80,25 @@ export const apiClient = {
       solanaSignature: input.solanaSignature,
       registeredAt: new Date().toISOString()
     };
+  },
+
+  async listProofs(
+    creatorWallet: string,
+    opts?: { cursor?: string; limit?: number }
+  ): Promise<{ proofs: Proof[]; nextCursor: string | null }> {
+    if (apiBaseUrl) {
+      const params = new URLSearchParams({ creatorWallet });
+      if (opts?.cursor) params.set("cursor", opts.cursor);
+      if (opts?.limit) params.set("limit", String(opts.limit));
+      const response = await fetch(`${apiBaseUrl}/api/proofs?${params.toString()}`, {
+        cache: "no-store",
+        headers: authHeaders()
+      });
+      return readApiResponse<{ proofs: Proof[]; nextCursor: string | null }>(response);
+    }
+
+    await new Promise((resolve) => setTimeout(resolve, 300));
+    return { proofs: [], nextCursor: null };
   },
 
   async getProof(id: string): Promise<Proof> {

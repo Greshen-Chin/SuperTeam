@@ -97,6 +97,11 @@ export async function migrate() {
     alter table proofs add column if not exists mint_address text unique;
     alter table proofs add column if not exists ipfs_video_uri text;
     alter table proofs add column if not exists ipfs_thumbnail_uri text;
+    alter table proofs add column if not exists license_fee_lamports bigint not null default 0;
+    alter table proofs add column if not exists license_model text not null default 'flat';
+    alter table proofs add column if not exists license_split jsonb;
+    alter table proofs add column if not exists phash_bucket0 smallint;
+    create index if not exists proofs_phash_bucket0_idx on proofs (phash_bucket0);
     alter table verifications add column if not exists uploaded_phash text;
   `);
 }

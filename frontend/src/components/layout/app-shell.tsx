@@ -1,11 +1,14 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { usePathname } from "next/navigation";
 import { Archive, BadgeCheck, Search, UploadCloud, Wallet } from "lucide-react";
 import { routes } from "@/lib/routes";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/context/AuthContext";
+import { AuthModal } from "@/components/auth/auth-modal";
 
 type AppShellProps = {
   children: ReactNode;
@@ -29,9 +32,12 @@ const homeNavItems = [
 export function AppShell({ children }: AppShellProps) {
   const pathname = usePathname();
   const isHome = pathname === routes.home;
+  const { isLoggedIn } = useAuth();
+  const [authOpen, setAuthOpen] = useState(false);
 
   return (
     <div className="min-h-screen bg-[var(--bg)] text-white">
+      <AuthModal open={authOpen} onClose={() => setAuthOpen(false)} />
       <header className={cn("navbar", isHome && "home-navbar")}>
         <Link className="nav-logo" href={routes.home}>
           <ShieldLogo />
@@ -59,9 +65,15 @@ export function AppShell({ children }: AppShellProps) {
 
         <div className="nav-right">
           {isHome ? (
-            <Link className="home-nav-launch" href={routes.register}>
-              Launch app
-            </Link>
+            isLoggedIn ? (
+              <Link className="home-nav-launch" href={routes.dashboard}>
+                Launch app
+              </Link>
+            ) : (
+              <button className="home-nav-launch" onClick={() => setAuthOpen(true)} type="button">
+                Launch app
+              </button>
+            )
           ) : (
             <button className="wallet-pill" type="button" aria-label="Connected wallet 9a4F...FF32">
               <span className="wallet-dot" />

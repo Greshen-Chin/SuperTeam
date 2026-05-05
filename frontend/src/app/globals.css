@@ -1646,6 +1646,52 @@ textarea {
   padding: 12px 20px;
 }
 
+.proof-title-input {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 14px;
+  color: white;
+  font-family: var(--font-display), ui-sans-serif, system-ui, sans-serif;
+  font-size: 15px;
+  outline: none;
+  padding: 13px 16px;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  width: 100%;
+}
+
+.proof-title-input::placeholder {
+  color: rgba(255, 255, 255, 0.3);
+}
+
+.proof-title-input:focus {
+  border-color: rgba(153, 69, 255, 0.6);
+  box-shadow: 0 0 0 3px rgba(153, 69, 255, 0.15);
+}
+
+.proof-error-row {
+  align-items: center;
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.25);
+  border-radius: 10px;
+  color: #fca5a5;
+  display: flex;
+  font-size: 13px;
+  gap: 8px;
+  margin-top: 10px;
+  padding: 10px 14px;
+  width: 100%;
+}
+
+.complete-card-link {
+  align-items: center;
+  color: var(--accent-purple, #9945ff) !important;
+  display: flex;
+  font-family: var(--font-mono), ui-monospace, monospace;
+  font-size: 10px;
+  gap: 4px;
+  text-decoration: none;
+}
+
 @keyframes upload-state-in {
   from {
     opacity: 0;

@@ -7,18 +7,11 @@ import type { ReactNode } from "react";
 import { ArrowRight, FileVideo, HardDrive, Layers3, Search, ShieldCheck, UploadCloud } from "lucide-react";
 import { SparklesCore } from "@/components/ui/sparkles";
 import { routes } from "@/lib/routes";
+import { apiClient } from "@/lib/api-client";
+import { useAuth } from "@/context/AuthContext";
+import type { Proof } from "@/shared/schemas";
 
-const vaultItems = [
-  { title: "Dance Cover - Rizky", meta: "NFT #0042", tone: "purple" },
-  { title: "Minecraft Speedrun", meta: "NFT #0041", tone: "mint" },
-  { title: "Resep Rendang Mama", meta: "NFT #0040", tone: "amber" }
-];
-
-const videoItems = [
-  { title: "morning-market-story.mp4", size: "42 MB", status: "Pinned" },
-  { title: "capcut-edit-master.mov", size: "256 MB", status: "Replicated" },
-  { title: "bali-day-three.mp4", size: "2.3 GB", status: "Cold vault" }
-];
+const TONES = ["purple", "mint", "amber", "blue", "pink"] as const;
 
 export function CheckPageView() {
   return (
@@ -56,6 +49,23 @@ export function CheckPageView() {
 }
 
 export function NftStorageView() {
+  const { publicAddress, isLoggedIn } = useAuth();
+  const [proofs, setProofs] = useState<Proof[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (!publicAddress) return;
+    setLoading(true);
+    apiClient.listProofs(publicAddress, { limit: 3 })
+      .then(({ proofs: items }) => setProofs(items))
+      .catch(() => setProofs([]))
+      .finally(() => setLoading(false));
+  }, [publicAddress]);
+
+  const displayItems = proofs.length > 0
+    ? proofs.slice(0, 3)
+    : null;
+
   return (
     <StorageShell
       eyebrow="PROOF VAULT"
@@ -65,21 +75,49 @@ export function NftStorageView() {
       href={routes.collection}
       variant="nft"
     >
-      <Link className="storage-card-grid proof-stack-hook action-hook" href={routes.collection} aria-label="Open proof vault">
-        {vaultItems.map((item) => (
-          <div className={`mini-proof-card ${item.tone}`} key={item.title}>
+      <div className="storage-card-grid proof-stack-hook action-hook" aria-label="Proof vault">
+        {loading ? (
+          <div className="mini-proof-card purple" style={{ opacity: 0.5 }}>
             <ShieldCheck size={26} />
-            <strong>{item.title}</strong>
-            <span>{item.meta}</span>
+            <strong>Loading...</strong>
+            <span>fetching proofs</span>
           </div>
-        ))}
+        ) : displayItems ? (
+          displayItems.map((proof, index) => (
+            <Link
+              className={`mini-proof-card ${TONES[index % TONES.length]}`}
+              href={routes.certificate(proof.id)}
+              key={proof.id}
+            >
+              <ShieldCheck size={26} />
+              <strong>{proof.title}</strong>
+              <span>{proof.id.slice(0, 14)}…</span>
+            </Link>
+          ))
+        ) : (
+          <Link className="mini-proof-card purple" href={routes.register}>
+            <ShieldCheck size={26} />
+            <strong>{isLoggedIn ? "No proofs yet" : "Connect wallet"}</strong>
+            <span>{isLoggedIn ? "Upload your first file" : "to view proofs"}</span>
+          </Link>
+        )}
         <span className="hook-caption proof-hook-caption">open / inspect</span>
-      </Link>
+      </div>
     </StorageShell>
   );
 }
 
 export function VideoStorageView() {
+  const { publicAddress, isLoggedIn } = useAuth();
+  const [proofs, setProofs] = useState<Proof[]>([]);
+
+  useEffect(() => {
+    if (!publicAddress) return;
+    apiClient.listProofs(publicAddress, { limit: 10 })
+      .then(({ proofs: items }) => setProofs(items))
+      .catch(() => setProofs([]));
+  }, [publicAddress]);
+
   return (
     <StorageShell
       eyebrow="VIDEO VAULT"
@@ -89,24 +127,36 @@ export function VideoStorageView() {
       href={routes.register}
       variant="video"
     >
-      <Link className="video-upload-hook action-hook" href={routes.register} aria-label="Upload a new video">
+      <Link className="video-upload-hook action-hook" href={routes.register} aria-label="Upload a new file">
         <UploadCloud size={30} />
         <span>Drop original</span>
         <ArrowRight size={16} />
       </Link>
       <div className="video-storage-list">
-        {videoItems.map((item) => (
-          <div className="video-storage-row" key={item.title}>
+        {proofs.length > 0 ? (
+          proofs.map((proof) => (
+            <Link className="video-storage-row" href={routes.certificate(proof.id)} key={proof.id}>
+              <span className="video-storage-icon">
+                <FileVideo size={18} />
+              </span>
+              <div>
+                <strong>{proof.title}</strong>
+                <small>{new Date(proof.registeredAt).toLocaleDateString()}</small>
+              </div>
+              <em>Anchored</em>
+            </Link>
+          ))
+        ) : (
+          <div className="video-storage-row">
             <span className="video-storage-icon">
               <FileVideo size={18} />
             </span>
             <div>
-              <strong>{item.title}</strong>
-              <small>{item.size}</small>
+              <strong>{isLoggedIn ? "No uploads yet" : "Connect wallet"}</strong>
+              <small>{isLoggedIn ? "protect your first file above" : "to view vault"}</small>
             </div>
-            <em>{item.status}</em>
           </div>
-        ))}
+        )}
       </div>
     </StorageShell>
   );

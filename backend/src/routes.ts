@@ -674,7 +674,11 @@ export async function registerRoutes(app: FastifyInstance) {
     const file = await request.file();
     if (!file) return fail(reply, request, 400, "FILE_REQUIRED", "Upload a video file using multipart/form-data.");
 
-    const allowedTypes = ["video/mp4", "video/webm", "video/quicktime", "video/x-matroska", "application/json"];
+    const allowedTypes = [
+      "video/mp4", "video/webm", "video/quicktime", "video/x-matroska",
+      "image/jpeg", "image/png", "image/gif", "image/webp",
+      "application/json"
+    ];
     if (!allowedTypes.includes(file.mimetype)) {
       return fail(reply, request, 400, "INVALID_FILE_TYPE",
         `File type '${file.mimetype}' is not allowed. Accepted: mp4, webm, mov, mkv, json.`);
