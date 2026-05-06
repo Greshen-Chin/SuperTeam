@@ -1,3 +1,5 @@
+import { env } from "@/lib/env";
+
 export type RegisterProofOnChainInput = {
   proofId: string;
   creatorWallet: string;
@@ -11,16 +13,36 @@ export type RegisterProofOnChainResult = {
   explorerUrl: string;
 };
 
+function explorerUrl(signature: string): string {
+  const cluster = env.NEXT_PUBLIC_SOLANA_CLUSTER;
+  const suffix = cluster === "mainnet-beta" ? "" : `?cluster=${cluster}`;
+  return `https://explorer.solana.com/tx/${signature}${suffix}`;
+}
+
 export async function registerProofOnChain(
   input: RegisterProofOnChainInput
 ): Promise<RegisterProofOnChainResult> {
-  await new Promise((resolve) => setTimeout(resolve, 900));
+  if (env.NEXT_PUBLIC_USE_MOCK_CHAIN) {
+    await new Promise((resolve) => setTimeout(resolve, 900));
+    const signature = `demo_${input.proofId}_${Date.now()}`;
+    return { signature, explorerUrl: explorerUrl(signature) };
+  }
 
-  const signature = `demo_${input.proofId}_${Date.now()}`;
+  const response = await fetch(`${env.NEXT_PUBLIC_API_BASE_URL}/api/anchor-proof`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(input)
+  });
 
-  return {
-    signature,
-    explorerUrl: `https://explorer.solana.com/tx/${signature}?cluster=devnet`
+  const payload = (await response.json()) as {
+    success: boolean;
+    data: RegisterProofOnChainResult | null;
+    error: { code: string; message: string } | null;
   };
-}
 
+  if (!response.ok || !payload.success || !payload.data) {
+    throw new Error(payload.error?.message ?? "Failed to anchor proof on Solana.");
+  }
+
+  return payload.data;
+}

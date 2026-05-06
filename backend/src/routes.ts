@@ -20,6 +20,7 @@ import {
 import { registerAuthRoutes } from "./routes/auth-routes.js";
 import { uploadToIpfs } from "./ipfs.js";
 import { getTransaction, isMockSignature, getBalanceLamports, requestDevnetAirdrop, getReceivedLamports } from "./solana.js";
+import { anchorProofOnChain, getPlatformWalletAddress } from "./anchor.js";
 import { config } from "./config.js";
 import { buildNftMetadata } from "./nft-metadata.js";
 import { scoreFromCounts } from "./reputation.js";
@@ -30,6 +31,13 @@ import type { ApiKey } from "./api-keys.js";
 
 const verifyBodySchema = z.object({ fingerprint: fingerprintSchema });
 const airdropBodySchema = z.object({ address: z.string().min(32).max(44) });
+const anchorProofBodySchema = z.object({
+  proofId: z.string().min(1),
+  creatorWallet: z.string().min(32).max(44),
+  sha256: z.string().min(16),
+  fingerprintRoot: z.string().min(16),
+  metadataUri: z.string().optional()
+});
 
 const AIRDROP_THRESHOLD_LAMPORTS = 50_000_000; // 0.05 SOL
 const DISPUTE_FILING_FEE_LAMPORTS = 10_000_000; // 0.01 SOL
@@ -692,6 +700,39 @@ export async function registerRoutes(app: FastifyInstance) {
       app.log.error({ err }, "IPFS upload failed");
       const message = err instanceof Error ? err.message : "IPFS upload failed.";
       return fail(reply, request, 502, "IPFS_UPLOAD_FAILED", message);
+    }
+  });
+
+  // ── Sponsored anchor (platform wallet pays + signs) ─────────────────────────
+
+  app.get("/api/anchor-proof/wallet", async (request, reply) => {
+    try {
+      const address = getPlatformWalletAddress();
+      const balanceLamports = await getBalanceLamports(address).catch(() => 0);
+      return ok(request, { address, balanceSol: balanceLamports / 1e9 });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Platform wallet not configured.";
+      return fail(reply, request, 503, "PLATFORM_WALLET_UNAVAILABLE", message);
+    }
+  });
+
+  app.post("/api/anchor-proof", {
+    config: { rateLimit: { max: 30, timeWindow: "1 minute" } }
+  }, async (request, reply) => {
+    const parsed = anchorProofBodySchema.safeParse(request.body);
+    if (!parsed.success) {
+      return fail(reply, request, 400, "INVALID_ANCHOR_PAYLOAD", parsed.error.issues[0]?.message ?? "Invalid anchor payload.");
+    }
+
+    try {
+      const result = await anchorProofOnChain(parsed.data);
+      return ok(request, result);
+    } catch (err) {
+      app.log.error({ err }, "Anchor proof failed");
+      const message = err instanceof Error ? err.message : "Anchor failed.";
+      const code = /PLATFORM_WALLET_SECRET/.test(message) ? "PLATFORM_WALLET_UNAVAILABLE" : "ANCHOR_FAILED";
+      const status = code === "PLATFORM_WALLET_UNAVAILABLE" ? 503 : 502;
+      return fail(reply, request, status, code, message);
     }
   });
 

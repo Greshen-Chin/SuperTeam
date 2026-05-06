@@ -13,6 +13,7 @@ export const config = {
   skipTxVerify: process.env.SKIP_TX_VERIFY === "true",
   vidchainProgramId: process.env.VIDCHAIN_PROGRAM_ID ?? null,
   vidchainPlatformWallet: process.env.VIDCHAIN_PLATFORM_WALLET ?? null,
+  platformWalletSecret: process.env.PLATFORM_WALLET_SECRET ?? null,
   vidchainAdminWallets: (process.env.VIDCHAIN_ADMIN_WALLETS ?? "").split(",").filter(Boolean),
   logLevel: process.env.LOG_LEVEL ?? "info"
 };
