@@ -2,13 +2,18 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import type { ReactNode } from "react";
 import { usePathname } from "next/navigation";
 import { Archive, BadgeCheck, Search, UploadCloud, Wallet } from "lucide-react";
 import { routes } from "@/lib/routes";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/context/AuthContext";
-import { AuthModal } from "@/components/auth/auth-modal";
+
+const AuthModal = dynamic(
+  () => import("@/components/auth/auth-modal").then((mod) => mod.AuthModal),
+  { ssr: false }
+);
 
 type AppShellProps = {
   children: ReactNode;

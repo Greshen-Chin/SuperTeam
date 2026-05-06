@@ -497,16 +497,16 @@ function PHashSection() {
         <MatrixRain />
         <div className="relative grid gap-5 md:grid-cols-2">
           {["Original Video", "Stolen Re-encoded Video"].map((label, index) => (
-            <CursorGlow className={cn("relative overflow-hidden rounded-3xl border border-white/10 bg-white/[0.04] p-5", index === 1 && "hash-glitch")} key={label}>
+            <CursorGlow className="relative overflow-hidden rounded-3xl border border-white/10 bg-white/[0.04] p-5" key={label}>
               <div className="grid h-56 place-items-center rounded-2xl bg-[radial-gradient(circle,rgba(153,69,255,0.28),rgba(2,6,23,0.9))]">
-                <FileVideo className={index === 0 ? "text-cyan-100" : "text-red-200"} size={58} />
+                <FileVideo className={index === 0 ? "text-emerald-100" : "text-violet-200"} size={58} />
               </div>
               <h3 className="mt-5 text-2xl font-black">{label}</h3>
               <p className="mt-2 font-mono text-xs uppercase tracking-[0.2em] text-zinc-500">{scanned ? `File ${index === 0 ? "OK" : "CHANGED"} / Visual match found` : "Waiting for scan"}</p>
-              {scanned ? <motion.div animate={{ x: ["-20%", "120%"] }} className="absolute left-0 top-0 h-full w-24 bg-gradient-to-r from-transparent via-emerald-200/24 to-transparent" transition={{ duration: 0.9, repeat: 2 }} /> : null}
+              {scanned ? <motion.div animate={{ x: ["-20%", "120%"] }} className="phash-normal-scan-line absolute left-0 top-0 h-full w-16" transition={{ duration: 0.9, repeat: 2 }} /> : null}
             </CursorGlow>
           ))}
-          <button className="absolute left-1/2 top-1/2 z-10 grid h-24 w-24 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full border border-cyan-200/45 bg-black text-sm font-black uppercase tracking-[0.18em] text-cyan-100 shadow-[0_0_70px_rgba(103,232,249,0.28)] transition hover:scale-110 hover:bg-cyan-100 hover:text-black" onClick={() => setScanned(true)} type="button">
+          <button className="phash-scan-button absolute left-1/2 top-1/2 z-10 grid h-24 w-24 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full border bg-black text-sm font-black uppercase tracking-[0.18em] transition hover:scale-105" onClick={() => setScanned(true)} type="button">
             Scan
           </button>
         </div>
@@ -695,7 +695,7 @@ function SpotTheFakeGame() {
             {sides.map((side) => (
               <motion.button
                 animate={picked === side && side === "right" ? { x: [-7, 7, -5, 5, 0] } : undefined}
-                className={cn("relative overflow-hidden rounded-3xl border p-4 text-left transition", picked === side ? (side === "left" ? "border-emerald-200 bg-emerald-300/[0.08]" : "border-red-200 bg-red-500/[0.08]") : "border-white/10 bg-white/[0.035]")}
+                className={cn("relative overflow-hidden rounded-3xl border p-4 text-left transition", picked === side ? (side === "left" ? "border-emerald-200 bg-emerald-300/[0.08]" : "border-violet-300 bg-violet-500/[0.08]") : "border-white/10 bg-white/[0.035]")}
                 key={side}
                 onClick={() => pick(side)}
                 type="button"
@@ -710,8 +710,8 @@ function SpotTheFakeGame() {
                   <span className="absolute bottom-3 right-3 rounded bg-black/70 px-2 py-1 font-mono text-[10px]">00:12</span>
                   {picked && side === "right" ? (
                     <>
-                      <span className="absolute left-8 top-12 h-12 w-12 rounded-full border-2 border-red-300 shadow-[0_0_24px_rgba(248,113,113,0.7)]" />
-                      <span className="absolute bottom-12 right-14 h-10 w-10 rounded-full border-2 border-red-300 shadow-[0_0_24px_rgba(248,113,113,0.7)]" />
+                      <span className="absolute left-8 top-12 h-12 w-12 rounded-full border-2 border-violet-300 shadow-[0_0_24px_rgba(153,69,255,0.7)]" />
+                      <span className="absolute bottom-12 right-14 h-10 w-10 rounded-full border-2 border-violet-300 shadow-[0_0_24px_rgba(153,69,255,0.7)]" />
                     </>
                   ) : null}
                 </div>
@@ -786,7 +786,7 @@ function JudgeMode() {
             <div className="rounded-3xl border border-white/10 bg-white/[0.035] p-5">
               <p className="font-mono text-xs uppercase tracking-[0.22em] text-zinc-500">{current.difficulty} case</p>
               <h4 className="mt-3 text-2xl font-black">{current.title}</h4>
-              <div className="mt-5 h-2 rounded-full bg-gradient-to-r from-emerald-300 via-white to-red-300" />
+              <div className="mt-5 h-2 rounded-full bg-[linear-gradient(90deg,rgba(20,241,149,0.9),rgba(153,69,255,0.75))]" />
               <div className="mt-3 flex justify-between text-xs text-zinc-500"><span>{current.creatorDate}</span><span>{current.thiefDate}</span></div>
               <p className="mt-5 font-mono text-xs leading-6 text-cyan-100">file check: 7f83b... vs a2f91...<br />visual match confirmed</p>
             </div>

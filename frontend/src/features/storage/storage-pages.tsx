@@ -1,50 +1,164 @@
 "use client";
 
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import { useEffect, useRef, useState } from "react";
-import type { CSSProperties } from "react";
+import type { CSSProperties, DragEvent } from "react";
 import type { ReactNode } from "react";
-import { ArrowRight, FileVideo, HardDrive, Layers3, Search, ShieldCheck, UploadCloud } from "lucide-react";
-import { SparklesCore } from "@/components/ui/sparkles";
+import { ArrowRight, CheckCircle2, FileVideo, HardDrive, Layers3, LockKeyhole, Search, ShieldCheck, UploadCloud, XCircle } from "lucide-react";
+import { ConfidenceMeter } from "@/components/proof/confidence-meter";
+import { ProofStatusBadge } from "@/components/proof/proof-status-badge";
 import { routes } from "@/lib/routes";
+import { useVerifyVideoFlow } from "@/features/verify/use-verify-video-flow";
 import { apiClient } from "@/lib/api-client";
 import { useAuth } from "@/context/AuthContext";
 import type { Proof } from "@/shared/schemas";
 
 const TONES = ["purple", "mint", "amber", "blue", "pink"] as const;
+const SparklesCore = dynamic(
+  () => import("@/components/ui/sparkles").then((mod) => mod.SparklesCore),
+  { ssr: false }
+);
 
 export function CheckPageView() {
+  const flow = useVerifyVideoFlow();
+  const inputRef = useRef<HTMLInputElement | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
+  const [shouldVerify, setShouldVerify] = useState(false);
+
+  const isBusy = flow.state === "fingerprinting" || flow.state === "checking";
+  const hasResult = flow.state === "match_found" || flow.state === "no_match";
+
+  useEffect(() => {
+    if (!shouldVerify || !flow.file) return;
+    setShouldVerify(false);
+    void flow.verify();
+  }, [flow, shouldVerify]);
+
+  const handleFile = (file: File | null) => {
+    if (!file || isBusy) return;
+    flow.selectFile(file);
+    setShouldVerify(true);
+  };
+
+  const handleDrop = (event: DragEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    setIsDragging(false);
+    handleFile(event.dataTransfer.files[0] ?? null);
+  };
+
   return (
-    <StorageShell
-      eyebrow="VIDEO CHECK"
-      title="Drop it. Catch the copy."
-      icon={<Search size={28} />}
-      cta="Check now"
-      href={routes.verify}
-      variant="check"
+    <div
+      className={isDragging ? "vid-upload-page check-upload-page drag-active" : "vid-upload-page check-upload-page"}
+      onDragOver={(event) => { event.preventDefault(); setIsDragging(true); }}
+      onDragLeave={(event) => { if (event.currentTarget === event.target) setIsDragging(false); }}
+      onDrop={handleDrop}
     >
-      <Link className="check-lab-card action-hook" href={routes.verify} aria-label="Start a video check">
-        <div className="check-orbit-stage">
-          <div className="check-radar">
-            <span />
-            <span />
-            <span />
-            <Search size={34} />
-          </div>
-          <i />
-          <b />
+      <StorageCursor variant="check" />
+      <div className="storage-wallpaper-rails" aria-hidden>
+        <span />
+        <span />
+        <span />
+      </div>
+      <div className="upload-blob upload-blob-one" />
+      <div className="upload-blob upload-blob-two" />
+      <div className="upload-blob upload-blob-three" />
+
+      <section className="upload-shell">
+        <div className="upload-sparkles-field" aria-hidden>
+          <SparklesCore
+            background="transparent"
+            minSize={0.35}
+            maxSize={1.2}
+            particleDensity={90}
+            className="h-full w-full"
+            particleColor="#14F195"
+            speed={1.2}
+          />
         </div>
-        <div className="check-signal-list">
-          {["SHA-256", "pHash", "Registry"].map((item, index) => (
-            <div className="check-signal" key={item}>
-              <span>{index + 1}</span>
-              {item}
+
+        <div className="upload-state-stage">
+          <div className="upload-idle-state">
+            <p className="upload-kicker">VIDCHAIN CHECK</p>
+            <h1>Drop a copy.<br />Find the origin.</h1>
+            <p className="upload-subcopy">Upload a repost or edit. VidChain compares fingerprints and returns the closest proof.</p>
+
+            <button
+              className={isDragging ? "vault-portal check-portal drag-over" : "vault-portal check-portal"}
+              type="button"
+              onClick={() => inputRef.current?.click()}
+              disabled={isBusy}
+              aria-label="Upload a video to check"
+            >
+              <span className="vault-ring vault-ring-one" />
+              <span className="vault-ring vault-ring-two" />
+              <span className="vault-ring vault-ring-three" />
+              <span className="portal-ripple portal-ripple-one" />
+              <span className="portal-ripple portal-ripple-two" />
+              <span className="vault-orb vault-orb-one" />
+              <span className="vault-orb vault-orb-two" />
+              <span className="vault-orb vault-orb-three" />
+              <span className="vault-orb vault-orb-four" />
+              <span className="vault-orb vault-orb-five" />
+              <span className="vault-core">
+                <Search size={42} />
+              </span>
+            </button>
+
+            <p className="upload-hint">{isBusy ? "checking fingerprint..." : "click to check - or drag file here"}</p>
+            <div className="file-type-pills">
+              {["MP4", "MOV", "AVI", "MKV", "WEBM"].map((type) => <span key={type}>{type}</span>)}
             </div>
-          ))}
+
+            {flow.file ? (
+              <div className="check-file-status">
+                <FileVideo size={16} />
+                <span>{flow.file.name}</span>
+              </div>
+            ) : null}
+
+            {isBusy ? (
+              <div className="check-result-strip active">
+                <Search size={16} />
+                <span>Scanning SHA-256 + pHash + registry</span>
+              </div>
+            ) : null}
+
+            {flow.error ? (
+              <div className="check-result-strip error">
+                <XCircle size={16} />
+                <span>{flow.error}</span>
+              </div>
+            ) : null}
+
+            {hasResult && flow.result ? (
+              <div className="check-result-card">
+                <div className="check-result-title">
+                  {flow.result.matchType === "none" ? <XCircle size={18} /> : <CheckCircle2 size={18} />}
+                  <strong>{flow.result.matchType === "none" ? "No known origin" : "Likely origin found"}</strong>
+                </div>
+                <ProofStatusBadge matchType={flow.result.matchType} />
+                <ConfidenceMeter value={flow.result.confidence} />
+                {flow.result.certificateUrl ? (
+                  <Link className="check-certificate-link" href={flow.result.certificateUrl}>
+                    Open certificate
+                    <ArrowRight size={14} />
+                  </Link>
+                ) : null}
+              </div>
+            ) : null}
+          </div>
         </div>
-        <span className="hook-caption">tap / drop</span>
-      </Link>
-    </StorageShell>
+      </section>
+
+      <input
+        ref={inputRef}
+        accept="video/*"
+        className="hidden"
+        type="file"
+        onChange={(event) => handleFile(event.target.files?.[0] ?? null)}
+      />
+    </div>
   );
 }
 
@@ -121,42 +235,72 @@ export function VideoStorageView() {
   return (
     <StorageShell
       eyebrow="VIDEO VAULT"
-      title="Originals, ready."
+      title="Secured originals."
       icon={<HardDrive size={28} />}
       cta="Upload"
       href={routes.register}
       variant="video"
     >
-      <Link className="video-upload-hook action-hook" href={routes.register} aria-label="Upload a new file">
-        <UploadCloud size={30} />
-        <span>Drop original</span>
-        <ArrowRight size={16} />
-      </Link>
-      <div className="video-storage-list">
-        {proofs.length > 0 ? (
-          proofs.map((proof) => (
-            <Link className="video-storage-row" href={routes.certificate(proof.id)} key={proof.id}>
-              <span className="video-storage-icon">
-                <FileVideo size={18} />
-              </span>
-              <div>
-                <strong>{proof.title}</strong>
-                <small>{new Date(proof.registeredAt).toLocaleDateString()}</small>
-              </div>
-              <em>Anchored</em>
-            </Link>
-          ))
-        ) : (
-          <div className="video-storage-row">
-            <span className="video-storage-icon">
-              <FileVideo size={18} />
+      <div className="vault-room">
+        <section className="vault-core-panel" aria-label="Vault status">
+          <div className="vault-status-bar">
+            <span>
+              <LockKeyhole size={14} />
+              Vault sealed
             </span>
-            <div>
-              <strong>{isLoggedIn ? "No uploads yet" : "Connect wallet"}</strong>
-              <small>{isLoggedIn ? "protect your first file above" : "to view vault"}</small>
-            </div>
+            <strong>{proofs.length.toString().padStart(2, "0")} assets</strong>
           </div>
-        )}
+          <div className="vault-door" aria-hidden>
+            <span className="vault-door-rim" />
+            <span className="vault-door-ring vault-door-ring-one" />
+            <span className="vault-door-ring vault-door-ring-two" />
+            <span className="vault-spokes" />
+            <span className="vault-lock-core">
+              <LockKeyhole size={28} />
+            </span>
+            <span className="vault-door-label">Owner-only archive</span>
+          </div>
+          <Link className="vault-deposit-link" href={routes.register}>
+            <UploadCloud size={16} />
+            Deposit new original
+          </Link>
+        </section>
+
+        <section className="vault-inventory" aria-label="Vault inventory">
+          <div className="vault-inventory-heading">
+            <span>Stored originals</span>
+            <i />
+          </div>
+          <div className="vault-ledger">
+            {proofs.length > 0 ? (
+              proofs.map((proof, index) => (
+                <Link className="video-storage-row vault-asset-row" href={routes.certificate(proof.id)} key={proof.id}>
+                  <span className="vault-slot-index">{String(index + 1).padStart(2, "0")}</span>
+                  <span className="video-storage-icon">
+                    <FileVideo size={18} />
+                  </span>
+                  <div>
+                    <strong>{proof.title}</strong>
+                    <small>{new Date(proof.registeredAt).toLocaleDateString()}</small>
+                  </div>
+                  <em>Sealed</em>
+                </Link>
+              ))
+            ) : (
+              <Link className="video-storage-row vault-asset-row empty" href={isLoggedIn ? routes.register : routes.login}>
+                <span className="vault-slot-index">01</span>
+                <span className="video-storage-icon">
+                  <FileVideo size={18} />
+                </span>
+                <div>
+                  <strong>{isLoggedIn ? "No originals stored" : "Vault locked"}</strong>
+                  <small>{isLoggedIn ? "deposit your first protected file" : "connect wallet to unlock inventory"}</small>
+                </div>
+                <em>{isLoggedIn ? "Empty" : "Locked"}</em>
+              </Link>
+            )}
+          </div>
+        </section>
       </div>
     </StorageShell>
   );

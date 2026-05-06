@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { CSSProperties, DragEvent } from "react";
 import {
@@ -13,7 +14,6 @@ import {
   RotateCcw,
   ShieldCheck
 } from "lucide-react";
-import { SparklesCore } from "@/components/ui/sparkles";
 import { routes } from "@/lib/routes";
 import { useRegisterVideoFlow } from "./use-register-video-flow";
 import type { RegisterState } from "./use-register-video-flow";
@@ -25,6 +25,11 @@ const PROCESSING_STEPS = [
   "Signing with Solana...",
   "Anchoring to blockchain..."
 ];
+
+const SparklesCore = dynamic(
+  () => import("@/components/ui/sparkles").then((mod) => mod.SparklesCore),
+  { ssr: false }
+);
 
 const STATE_TO_STEP: Partial<Record<RegisterState, number>> = {
   fingerprinting: 0,

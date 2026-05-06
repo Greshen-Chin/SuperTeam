@@ -1,8 +1,6 @@
 "use client";
 
-import { PublicKey } from "@solana/web3.js";
-import type { Transaction, VersionedTransaction } from "@solana/web3.js";
-import { SolanaWallet } from "@web3auth/solana-provider";
+import type { PublicKey, Transaction, VersionedTransaction } from "@solana/web3.js";
 import { useEffect, useMemo, useState } from "react";
 import { useWeb3Auth } from "@/components/providers/web3auth-provider";
 
@@ -16,6 +14,16 @@ export type VidchainWallet = {
   signTransaction: <T extends Transaction | VersionedTransaction>(tx: T) => Promise<T>;
   signMessage: (msg: Uint8Array) => Promise<Uint8Array>;
 };
+
+async function createSolanaWallet(provider: NonNullable<ReturnType<typeof useWeb3Auth>["provider"]>) {
+  const { SolanaWallet } = await import("@web3auth/solana-provider");
+  return new SolanaWallet(provider);
+}
+
+async function createPublicKey(value: string): Promise<PublicKey> {
+  const { PublicKey: SolanaPublicKey } = await import("@solana/web3.js");
+  return new SolanaPublicKey(value);
+}
 
 export function useVidchainWallet(): VidchainWallet {
   const { provider, isConnected, ready, login, logout } = useWeb3Auth();
@@ -32,10 +40,11 @@ export function useVidchainWallet(): VidchainWallet {
     let cancelled = false;
     (async () => {
       try {
-        const sw = new SolanaWallet(provider);
+        const sw = await createSolanaWallet(provider);
         const accounts = await sw.requestAccounts();
         const first = accounts[0];
-        if (!cancelled) setPublicKey(first ? new PublicKey(first) : null);
+        const nextPublicKey = first ? await createPublicKey(first) : null;
+        if (!cancelled) setPublicKey(nextPublicKey);
       } catch {
         if (!cancelled) setPublicKey(null);
       }
@@ -65,13 +74,13 @@ export function useVidchainWallet(): VidchainWallet {
 
       async signTransaction<T extends Transaction | VersionedTransaction>(tx: T): Promise<T> {
         if (!provider) throw new Error("No wallet connected");
-        const sw = new SolanaWallet(provider);
+        const sw = await createSolanaWallet(provider);
         return (await sw.signTransaction(tx as Transaction)) as T;
       },
 
       async signMessage(msg: Uint8Array): Promise<Uint8Array> {
         if (!provider) throw new Error("No wallet connected");
-        const sw = new SolanaWallet(provider);
+        const sw = await createSolanaWallet(provider);
         return sw.signMessage(msg);
       },
     }),
