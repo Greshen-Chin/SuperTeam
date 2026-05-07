@@ -174,6 +174,7 @@ export function MarketView() {
       {editingProof ? (
         <SetPriceModal
           proof={editingProof}
+          walletAddress={publicAddress}
           onClose={() => setEditingProof(null)}
           onSaved={handlePriceSaved}
         />
@@ -250,10 +251,12 @@ function LicenseCard({ license, proof }: { license: License; proof: Proof | unde
 
 function SetPriceModal({
   proof,
+  walletAddress,
   onClose,
   onSaved
 }: {
   proof: Proof;
+  walletAddress: string | null;
   onClose: () => void;
   onSaved: (updated: Proof) => void;
 }) {
@@ -264,6 +267,7 @@ function SetPriceModal({
   const [sol, setSol] = useState(currentSol);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -278,15 +282,17 @@ function SetPriceModal({
   async function handleSave() {
     if (!canSave) return;
     setSaving(true);
+    setSaveError(null);
     try {
       const updated = await apiClient.setLicenseTerms(proof.id, {
         feeLamports,
-        licenseModel: "flat"
+        licenseModel: "flat",
+        walletAddress
       });
       setSaved(true);
       setTimeout(() => onSaved(updated), 800);
-    } catch {
-      // silently allow retry
+    } catch (err) {
+      setSaveError(err instanceof Error ? err.message : "Failed to save. Please try again.");
     } finally {
       setSaving(false);
     }
@@ -344,6 +350,10 @@ function SetPriceModal({
             Price is locked on-chain when a buyer pays.
           </p>
         </div>
+
+        {saveError && (
+          <p className="market-modal-error">{saveError}</p>
+        )}
 
         <div className="market-modal-footer">
           <button className="market-cancel-btn" type="button" onClick={onClose}>Cancel</button>

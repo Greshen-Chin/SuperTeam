@@ -2536,6 +2536,23 @@ textarea {
   }
 }
 
+/* Page loading skeleton */
+.page-skeleton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 60vh;
+}
+.page-skeleton-spinner {
+  width: 22px;
+  height: 22px;
+  border: 2px solid rgba(255, 255, 255, 0.1);
+  border-top-color: var(--purple);
+  border-radius: 50%;
+  animation: page-spin 0.65s linear infinite;
+}
+@keyframes page-spin { to { transform: rotate(360deg); } }
+
 .navbar {
   align-items: center;
   backdrop-filter: blur(24px);
@@ -8141,7 +8158,7 @@ button[class*="bg-emerald"]:hover {
   inset: 0;
   background: rgba(0, 0, 0, 0.6);
   backdrop-filter: blur(6px);
-  z-index: 100;
+  z-index: 9999;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -8274,6 +8291,13 @@ button[class*="bg-emerald"]:hover {
   font-size: 0.72rem;
   color: var(--app-muted);
   line-height: 1.55;
+  margin: 0;
+}
+
+.market-modal-error {
+  font-size: 0.75rem;
+  color: #f87171;
+  padding: 0 1.4rem 0.75rem;
   margin: 0;
 }
 

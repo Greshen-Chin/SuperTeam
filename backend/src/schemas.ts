@@ -38,7 +38,8 @@ export const licenseTermsSchema = z
   .object({
     licenseModel: licenseModelSchema,
     feeLamports: z.number().int().nonnegative(),
-    splitConfig: z.array(splitRecipientSchema).optional()
+    splitConfig: z.array(splitRecipientSchema).optional(),
+    walletAddress: z.string().optional()
   })
   .refine(
     (v) =>

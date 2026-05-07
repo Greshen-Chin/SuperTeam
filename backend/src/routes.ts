@@ -314,7 +314,8 @@ export async function registerRoutes(app: FastifyInstance) {
       const user = await import("./repositories/auth-repository.js").then((m) =>
         m.createAuthRepository(pool).findById(String(payload.sub))
       );
-      if (!user?.walletAddress || user.walletAddress !== proof.creatorWallet) {
+      const effectiveWallet = user?.walletAddress ?? parsed.data.walletAddress ?? null;
+      if (!effectiveWallet || effectiveWallet !== proof.creatorWallet) {
         return fail(reply, request, 403, "NOT_PROOF_OWNER", "Only the proof creator can update license terms.");
       }
 
@@ -771,11 +772,19 @@ function handleDbError(
   error: unknown,
   fallback: string
 ) {
+  if (isJwtError(error)) {
+    return fail(reply, request, 401, "TOKEN_EXPIRED", "Your session has expired. Please log in again.");
+  }
   if (isDatabaseError(error)) {
     return fail(reply, request, 503, "DATABASE_UNAVAILABLE",
       "Database is not reachable. Set DATABASE_URL in backend/.env and restart.");
   }
   return fail(reply, request, 500, "INTERNAL", error instanceof Error ? error.message : fallback);
+}
+
+function isJwtError(error: unknown) {
+  if (!(error instanceof Error)) return false;
+  return error.name === "JsonWebTokenError" || error.name === "TokenExpiredError" || error.name === "NotBeforeError";
 }
 
 function isDatabaseError(error: unknown) {

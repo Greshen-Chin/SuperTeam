@@ -119,13 +119,15 @@ export const apiClient = {
 
   async setLicenseTerms(
     proofId: string,
-    terms: { feeLamports: number; licenseModel: "flat" | "revshare" | "split" }
+    terms: { feeLamports: number; licenseModel: "flat" | "revshare" | "split"; walletAddress?: string | null }
   ): Promise<Proof> {
     if (apiBaseUrl) {
+      const body: Record<string, unknown> = { licenseModel: terms.licenseModel, feeLamports: terms.feeLamports };
+      if (terms.walletAddress) body.walletAddress = terms.walletAddress;
       const response = await fetch(`${apiBaseUrl}/api/proofs/${proofId}/license-terms`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json", ...authHeaders() },
-        body: JSON.stringify({ licenseModel: terms.licenseModel, feeLamports: terms.feeLamports })
+        body: JSON.stringify(body)
       });
       return readApiResponse<Proof>(response);
     }

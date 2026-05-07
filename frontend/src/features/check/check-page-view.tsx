@@ -1,5 +1,6 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import type { CSSProperties } from "react";
@@ -14,7 +15,11 @@ import {
   UploadCloud,
   Zap,
 } from "lucide-react";
-import { SparklesCore } from "@/components/ui/sparkles";
+
+const SparklesCore = dynamic(
+  () => import("@/components/ui/sparkles").then((mod) => mod.SparklesCore),
+  { ssr: false }
+);
 import { VideoDropzone } from "@/components/upload/video-dropzone";
 import { useVerifyVideoFlow } from "@/features/verify/use-verify-video-flow";
 import type { MatchType } from "@/shared/schemas";
