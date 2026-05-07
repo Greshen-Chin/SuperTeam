@@ -3,6 +3,8 @@
 import { useState } from "react";
 import Link from "next/link";
 import dynamic from "next/dynamic";
+import { ProfileModal } from "@/features/profile/profile-modal";
+import { useCreatorProfile } from "@/lib/use-creator-profile";
 import type { ReactNode } from "react";
 import { usePathname } from "next/navigation";
 import { Archive, BadgeCheck, Search, UploadCloud, Wallet } from "lucide-react";
@@ -39,10 +41,13 @@ export function AppShell({ children }: AppShellProps) {
   const isHome = pathname === routes.home;
   const { isLoggedIn } = useAuth();
   const [authOpen, setAuthOpen] = useState(false);
+  const [profileOpen, setProfileOpen] = useState(false);
+  const { profile, hasName } = useCreatorProfile();
 
   return (
     <div className="min-h-screen bg-[var(--bg)] text-white">
       <AuthModal open={authOpen} onClose={() => setAuthOpen(false)} />
+      <ProfileModal open={profileOpen} onClose={() => setProfileOpen(false)} />
       <header className={cn("navbar", isHome && "home-navbar")}>
         <Link className="nav-logo" href={routes.home}>
           <ShieldLogo />
@@ -85,10 +90,19 @@ export function AppShell({ children }: AppShellProps) {
               9a4F...FF32
             </button>
           )}
-          <button className="nav-avatar" type="button" aria-label="Open account menu">
+          <button
+            className={hasName ? "nav-avatar nav-avatar-has-profile" : "nav-avatar"}
+            type="button"
+            aria-label="Open creator profile"
+            title={hasName ? `Profile: ${profile.channelName}` : "Set up creator profile"}
+            onClick={() => setProfileOpen(true)}
+          >
             <span className="nav-avatar-inner">
-              <Wallet size={15} />
+              {hasName
+                ? <span className="nav-avatar-initials">{profile.channelName.slice(0, 2).toUpperCase()}</span>
+                : <Wallet size={15} />}
             </span>
+            {!hasName && isLoggedIn ? <span className="nav-avatar-dot" /> : null}
           </button>
         </div>
       </header>

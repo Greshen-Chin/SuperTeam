@@ -52,3 +52,13 @@ mainnet*.json
 
 # Generated docs
 docs/api/
+
+AGENTS.md
+CONTRIBUTING.md
+DEPLOYMENT.md
+MANUAL_SETUP.md
+TESTING.md
+WORKFLOW.md
+BUILD_PLAN.md
+instruction.md
+../backend/instruction.md

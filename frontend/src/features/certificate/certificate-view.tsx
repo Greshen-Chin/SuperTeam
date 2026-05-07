@@ -1,10 +1,13 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { ExternalLink, Share2, ShieldCheck } from "lucide-react";
+import { Download, ExternalLink, FileText, Link2, Loader2, Share2, ShieldCheck, User } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { ProfileModal } from "@/features/profile/profile-modal";
+import { useCreatorProfile } from "@/lib/use-creator-profile";
+import { downloadProofReport } from "@/lib/pdf-report";
 import { formatDateTime, formatWallet } from "@/lib/utils";
 import type { Proof } from "@/shared/schemas";
 
@@ -16,8 +19,11 @@ export function CertificateView({ proof }: CertificateViewProps) {
   const explorerUrl = `https://explorer.solana.com/tx/${proof.solanaSignature}?cluster=devnet`;
   const [copiedField, setCopiedField] = useState<string | null>(null);
   const [shareOpen, setShareOpen] = useState(false);
+  const [downloadOpen, setDownloadOpen] = useState(false);
+  const [profileOpen, setProfileOpen] = useState(false);
   const stampRef = useRef<HTMLDivElement | null>(null);
   const shareUrl = typeof window === "undefined" ? "" : window.location.href;
+  const { profile, hasName } = useCreatorProfile();
 
   useEffect(() => {
     const stamp = stampRef.current;
@@ -80,9 +86,26 @@ export function CertificateView({ proof }: CertificateViewProps) {
             <Share2 size={16} />
             Share Certificate
           </Button>
+          <Button type="button" variant="secondary" onClick={() => setDownloadOpen(true)}>
+            <Download size={16} />
+            Download Report PDF
+          </Button>
         </div>
       </Card>
+
+      {/* Download Report Panel */}
+      <DownloadReportPanel
+        open={downloadOpen}
+        proof={proof}
+        channelName={profile.channelName}
+        platformUrl={profile.platformUrl}
+        hasProfile={hasName}
+        onClose={() => setDownloadOpen(false)}
+        onOpenProfile={() => { setDownloadOpen(false); setProfileOpen(true); }}
+      />
+
       <ShareSheet explorerUrl={explorerUrl} onClose={() => setShareOpen(false)} open={shareOpen} shareUrl={shareUrl} title={proof.title} />
+      <ProfileModal open={profileOpen} onClose={() => setProfileOpen(false)} />
     </div>
   );
 }
@@ -124,6 +147,145 @@ function ShareSheet({ explorerUrl, onClose, open, shareUrl, title }: { explorerU
           <a className="share-sheet-action" href={explorerUrl} rel="noreferrer" target="_blank">Open Explorer</a>
           <button className="share-sheet-action" type="button" onClick={() => void navigator.clipboard.writeText(shareUrl)}>Copy link</button>
         </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Download Report Panel ────────────────────────────────────────────────────
+
+type DownloadReportPanelProps = {
+  open: boolean;
+  proof: Proof;
+  channelName: string;
+  platformUrl: string;
+  hasProfile: boolean;
+  onClose: () => void;
+  onOpenProfile: () => void;
+};
+
+function DownloadReportPanel({
+  open, proof, channelName, platformUrl, hasProfile, onClose, onOpenProfile
+}: DownloadReportPanelProps) {
+  const [videoUrl, setVideoUrl] = useState("");
+  const [generating, setGenerating] = useState(false);
+  const [done, setDone] = useState(false);
+
+  // Restore saved URL for this proof
+  useEffect(() => {
+    if (!open) return;
+    const saved = typeof window !== "undefined"
+      ? localStorage.getItem(`vidchain_proof_url_${proof.id}`) ?? ""
+      : "";
+    setVideoUrl(saved);
+    setDone(false);
+  }, [open, proof.id]);
+
+  async function handleGenerate() {
+    if (videoUrl) {
+      try { localStorage.setItem(`vidchain_proof_url_${proof.id}`, videoUrl); } catch { /* ignore */ }
+    }
+    setGenerating(true);
+    try {
+      await downloadProofReport({ proof, channelName, platformUrl, originalVideoUrl: videoUrl || undefined });
+      setDone(true);
+      setTimeout(onClose, 1800);
+    } catch {
+      // silently fail — jsPDF errors are rare
+    } finally {
+      setGenerating(false);
+    }
+  }
+
+  if (!open) return null;
+
+  return (
+    <div className="share-sheet-backdrop" onMouseDown={onClose}>
+      <div className="share-sheet report-panel" onMouseDown={(e) => e.stopPropagation()}>
+        <div className="share-sheet-handle" />
+
+        <div className="report-panel-header">
+          <FileText size={20} />
+          <div>
+            <h3>Download Copyright Report</h3>
+            <p>A PDF certificate you can submit to YouTube, TikTok, Instagram, or any platform.</p>
+          </div>
+        </div>
+
+        {/* Profile prompt if no channel name */}
+        {!hasProfile ? (
+          <div className="report-profile-prompt">
+            <User size={16} />
+            <div>
+              <strong>Set your channel name first</strong>
+              <small>Your name appears on the report as the rights holder.</small>
+            </div>
+            <button className="report-profile-btn" type="button" onClick={onOpenProfile}>
+              Set up profile
+            </button>
+          </div>
+        ) : (
+          <div className="report-profile-filled">
+            <User size={14} />
+            <span>Reporting as <strong>{channelName}</strong></span>
+            <button className="report-change-btn" type="button" onClick={onOpenProfile}>Change</button>
+          </div>
+        )}
+
+        {/* Video URL input */}
+        <div className="report-url-section">
+          <label className="report-url-label">
+            <Link2 size={14} />
+            Where did you originally post this video?
+            <em>optional — included in the report</em>
+          </label>
+          <input
+            className="report-url-input"
+            placeholder="e.g. https://www.youtube.com/watch?v=xxxxx"
+            type="url"
+            value={videoUrl}
+            onChange={(e) => setVideoUrl(e.target.value)}
+          />
+          <p className="report-url-hint">
+            Paste the YouTube, TikTok, Instagram, or Bigo Live URL where you first published this video.
+            This strengthens your copyright report.
+          </p>
+        </div>
+
+        {/* What's included preview */}
+        <div className="report-includes">
+          <p className="report-includes-title">Report includes:</p>
+          <div className="report-includes-grid">
+            {[
+              "Your channel name & wallet",
+              "Video title & registration date",
+              "Solana transaction signature",
+              "SHA-256 cryptographic hash",
+              "Fingerprint root proof",
+              "Good faith declaration",
+            ].map((item) => (
+              <div className="report-include-item" key={item}>
+                <ShieldCheck size={12} />
+                {item}
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <button
+          className="report-download-btn"
+          disabled={!hasProfile || generating}
+          type="button"
+          onClick={handleGenerate}
+        >
+          {generating ? (
+            <><Loader2 size={16} className="report-spinner" />Generating PDF…</>
+          ) : done ? (
+            <><ShieldCheck size={16} />Downloaded!</>
+          ) : (
+            <><Download size={16} />Generate & Download PDF</>
+          )}
+        </button>
       </div>
     </div>
   );
