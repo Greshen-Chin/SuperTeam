@@ -45,13 +45,16 @@ export function Web3AuthProvider({ children }: { children: React.ReactNode }) {
   const initPromiseRef = useRef<Promise<Web3AuthInstance | null> | null>(null);
   const [provider, setProvider] = useState<IProvider | null>(null);
   const [isConnected, setIsConnected] = useState(false);
-  const [ready, setReady] = useState(true);
+  const [ready, setReady] = useState(!Boolean(env.NEXT_PUBLIC_WEB3AUTH_CLIENT_ID));
   const [initError, setInitError] = useState<string | null>(null);
 
   const configured = Boolean(env.NEXT_PUBLIC_WEB3AUTH_CLIENT_ID);
 
   const ensureWeb3Auth = useCallback((): Promise<Web3AuthInstance | null> => {
-    if (!configured) return Promise.resolve(null);
+    if (!configured) {
+      setReady(true);
+      return Promise.resolve(null);
+    }
     if (w3aRef.current) return Promise.resolve(w3aRef.current);
     if (initPromiseRef.current) return initPromiseRef.current;
 
@@ -165,7 +168,7 @@ export function Web3AuthProvider({ children }: { children: React.ReactNode }) {
 
     const idle = window.setTimeout(() => {
       void ensureWeb3Auth();
-    }, 2500);
+    }, 300);
 
     return () => window.clearTimeout(idle);
   }, [configured, ensureWeb3Auth]);

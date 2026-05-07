@@ -30,7 +30,7 @@ function creatorReceives(feeLamports: number) {
 // ── Market page ───────────────────────────────────────────────────────────────
 
 export function MarketView() {
-  const { publicAddress, isLoggedIn } = useAuth();
+  const { publicAddress, isLoggedIn, isLoading: authLoading } = useAuth();
   const [proofs, setProofs] = useState<Proof[]>([]);
   const [licenses, setLicenses] = useState<License[]>([]);
   const [proofMap, setProofMap] = useState<Record<string, Proof>>({});
@@ -68,6 +68,17 @@ export function MarketView() {
 
   const listedProofs = proofs.filter((p) => p.licenseFeeLamports > 0);
   const unlistedProofs = proofs.filter((p) => p.licenseFeeLamports === 0);
+
+  if (authLoading) {
+    return (
+      <div className="market-page">
+        <div className="market-loading">
+          <Loader2 size={22} className="market-spinner" />
+          <span>Loading…</span>
+        </div>
+      </div>
+    );
+  }
 
   if (!isLoggedIn) {
     return (
