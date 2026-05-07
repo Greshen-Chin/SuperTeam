@@ -2,8 +2,10 @@
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
+import bs58 from "bs58";
 import { useVidchainWallet } from "@/lib/use-vidchain-wallet";
 import { useWeb3Auth } from "@/components/providers/web3auth-provider";
+import { loginWithWallet, persistAuth, requestWalletNonce } from "@/lib/auth-client";
 
 type AuthUser = {
   name: string;
@@ -20,6 +22,7 @@ type AuthContextValue = {
   loginWithGoogle: () => void;
   loginWithEmail: () => void;
   logout: () => void;
+  refreshJwt: () => Promise<void>;
 };
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -89,6 +92,17 @@ function AuthStateProvider({ children }: { children: ReactNode }) {
     void wallet.disconnect();
   }, [wallet]);
 
+  const refreshJwt = useCallback(async () => {
+    const address = wallet.publicKey?.toBase58();
+    if (!address) throw new Error("No wallet connected. Please log in again.");
+    const { nonce } = await requestWalletNonce(address);
+    const messageBytes = new TextEncoder().encode(`Login nonce: ${nonce}`);
+    const sig = await wallet.signMessage(messageBytes);
+    const signature = bs58.encode(sig);
+    const result = await loginWithWallet({ address, signature, nonce });
+    persistAuth(result);
+  }, [wallet]);
+
   const value = useMemo<AuthContextValue>(
     () => ({
       user,
@@ -99,8 +113,9 @@ function AuthStateProvider({ children }: { children: ReactNode }) {
       loginWithGoogle,
       loginWithEmail,
       logout,
+      refreshJwt,
     }),
-    [user, wallet.publicKey, wallet.connected, wallet.connecting, isLoading, error, loginWithGoogle, loginWithEmail, logout]
+    [user, wallet.publicKey, wallet.connected, wallet.connecting, isLoading, error, loginWithGoogle, loginWithEmail, logout, refreshJwt]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

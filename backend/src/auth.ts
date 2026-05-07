@@ -21,7 +21,7 @@ export function signAccessToken(user: User) {
       wallet_address: user.walletAddress
     },
     config.jwtSecret,
-    { expiresIn: "1h" }
+    { expiresIn: "7d" }
   );
 }
 

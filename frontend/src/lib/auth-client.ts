@@ -105,7 +105,7 @@ export async function listUsers(token: string) {
 export function persistAuth(result: AuthResult) {
   localStorage.setItem("vidchain_access_token", result.access_token);
   localStorage.setItem("vidchain_user", JSON.stringify(result.user));
-  document.cookie = `vidchain_session=${encodeURIComponent(result.access_token)}; path=/; max-age=3600; samesite=lax`;
+  document.cookie = `vidchain_session=${encodeURIComponent(result.access_token)}; path=/; max-age=604800; samesite=lax`;
 }
 
 export function getAccessToken() {

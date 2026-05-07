@@ -260,6 +260,7 @@ function SetPriceModal({
   onClose: () => void;
   onSaved: (updated: Proof) => void;
 }) {
+  const { refreshJwt } = useAuth();
   const currentSol = proof.licenseFeeLamports > 0
     ? lamportsToSol(proof.licenseFeeLamports)
     : "";
@@ -279,20 +280,34 @@ function SetPriceModal({
   const platformSol = feeLamports > 0 ? lamportsToSol(Math.floor((feeLamports * PLATFORM_FEE_BPS) / 10_000)) : "0";
   const canSave = feeLamports > 0;
 
+  async function doSave() {
+    const updated = await apiClient.setLicenseTerms(proof.id, {
+      feeLamports,
+      licenseModel: "flat",
+      walletAddress
+    });
+    setSaved(true);
+    setTimeout(() => onSaved(updated), 800);
+  }
+
   async function handleSave() {
     if (!canSave) return;
     setSaving(true);
     setSaveError(null);
     try {
-      const updated = await apiClient.setLicenseTerms(proof.id, {
-        feeLamports,
-        licenseModel: "flat",
-        walletAddress
-      });
-      setSaved(true);
-      setTimeout(() => onSaved(updated), 800);
+      await doSave();
     } catch (err) {
-      setSaveError(err instanceof Error ? err.message : "Failed to save. Please try again.");
+      const msg = err instanceof Error ? err.message : "Failed to save. Please try again.";
+      if (msg.toLowerCase().includes("session") || msg.toLowerCase().includes("expired")) {
+        try {
+          await refreshJwt();
+          await doSave();
+        } catch (retryErr) {
+          setSaveError(retryErr instanceof Error ? retryErr.message : "Please log out and log back in.");
+        }
+      } else {
+        setSaveError(msg);
+      }
     } finally {
       setSaving(false);
     }
