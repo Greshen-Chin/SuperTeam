@@ -167,16 +167,19 @@ export async function registerRoutes(app: FastifyInstance) {
     }
   });
 
-  app.get<{ Querystring: { creatorWallet?: string; cursor?: string; limit?: string } }>(
+  app.get<{ Querystring: { creatorWallet?: string; forSale?: string; excludeWallet?: string; cursor?: string; limit?: string } }>(
     "/api/proofs",
     async (request, reply) => {
-      const { creatorWallet, cursor, limit } = request.query;
-      if (!creatorWallet) return fail(reply, request, 400, "MISSING_WALLET", "creatorWallet query param is required.");
+      const { creatorWallet, forSale, excludeWallet, cursor, limit } = request.query;
+      const limitNum = Math.min(Number(limit ?? 20), 50);
       try {
-        const page = await createProofRepository(requirePool()).findByCreatorWallet(creatorWallet, {
-          cursor,
-          limit: Math.min(Number(limit ?? 20), 50)
-        });
+        const repo = createProofRepository(requirePool());
+        if (forSale === "true") {
+          const page = await repo.findListed({ cursor, limit: limitNum, excludeWallet });
+          return ok(request, page);
+        }
+        if (!creatorWallet) return fail(reply, request, 400, "MISSING_WALLET", "creatorWallet query param is required.");
+        const page = await repo.findByCreatorWallet(creatorWallet, { cursor, limit: limitNum });
         return ok(request, page);
       } catch (error) {
         return handleDbError(reply, request, error, "Failed to list proofs.");

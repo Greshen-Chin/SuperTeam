@@ -92,6 +92,54 @@ export function createProofRepository(pool: Pool) {
       return { proofs: page.map(mapProof), nextCursor };
     },
 
+    async findListed(opts: { cursor?: string; limit: number; excludeWallet?: string }): Promise<{ proofs: Proof[]; nextCursor: string | null }> {
+      const limit = Math.min(opts.limit, 50);
+      let rows: Record<string, unknown>[];
+
+      if (opts.cursor && opts.excludeWallet) {
+        const result = await pool.query(
+          `select * from proofs
+           where license_fee_lamports > 0 and status = 'active'
+             and creator_wallet != $1
+             and registered_at < (select registered_at from proofs where id = $2)
+           order by registered_at desc limit $3`,
+          [opts.excludeWallet, opts.cursor, limit + 1]
+        );
+        rows = result.rows;
+      } else if (opts.cursor) {
+        const result = await pool.query(
+          `select * from proofs
+           where license_fee_lamports > 0 and status = 'active'
+             and registered_at < (select registered_at from proofs where id = $1)
+           order by registered_at desc limit $2`,
+          [opts.cursor, limit + 1]
+        );
+        rows = result.rows;
+      } else if (opts.excludeWallet) {
+        const result = await pool.query(
+          `select * from proofs
+           where license_fee_lamports > 0 and status = 'active'
+             and creator_wallet != $1
+           order by registered_at desc limit $2`,
+          [opts.excludeWallet, limit + 1]
+        );
+        rows = result.rows;
+      } else {
+        const result = await pool.query(
+          `select * from proofs
+           where license_fee_lamports > 0 and status = 'active'
+           order by registered_at desc limit $1`,
+          [limit + 1]
+        );
+        rows = result.rows;
+      }
+
+      const hasMore = rows.length > limit;
+      const page = hasMore ? rows.slice(0, limit) : rows;
+      const nextCursor = hasMore && page.at(-1) ? String(page.at(-1)!.id) : null;
+      return { proofs: page.map(mapProof), nextCursor };
+    },
+
     async findCandidates(limit = 200): Promise<Proof[]> {
       const result = await pool.query(
         "select * from proofs where status = 'active' order by registered_at desc limit $1",
