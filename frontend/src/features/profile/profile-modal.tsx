@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Check, Link2, User, X } from "lucide-react";
+import { Check, Link2, LogOut, User, X } from "lucide-react";
 import { useCreatorProfile } from "@/lib/use-creator-profile";
 import type { CreatorProfile } from "@/lib/use-creator-profile";
 import { useAuth } from "@/context/AuthContext";
@@ -14,7 +14,7 @@ type ProfileModalProps = {
 
 export function ProfileModal({ open, onClose }: ProfileModalProps) {
   const { profile, save, loaded } = useCreatorProfile();
-  const { publicAddress, user } = useAuth();
+  const { publicAddress, user, logout } = useAuth();
   const [form, setForm] = useState<CreatorProfile>({ channelName: "", platformUrl: "" });
   const [saved, setSaved] = useState(false);
   const nameRef = useRef<HTMLInputElement>(null);
@@ -101,8 +101,13 @@ export function ProfileModal({ open, onClose }: ProfileModalProps) {
         </div>
 
         <div className="profile-modal-footer">
-          <button className="profile-cancel-btn" type="button" onClick={onClose}>
-            Cancel
+          <button
+            className="profile-logout-btn"
+            type="button"
+            onClick={() => { logout(); onClose(); }}
+          >
+            <LogOut size={14} />
+            Log out
           </button>
           <button
             className="profile-save-btn"

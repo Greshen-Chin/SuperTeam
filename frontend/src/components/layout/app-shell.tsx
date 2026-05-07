@@ -9,7 +9,7 @@ import type { ReactNode } from "react";
 import { usePathname } from "next/navigation";
 import { Archive, BadgeCheck, Search, Tag, UploadCloud, Wallet } from "lucide-react";
 import { routes } from "@/lib/routes";
-import { cn } from "@/lib/utils";
+import { cn, formatWallet } from "@/lib/utils";
 import { useAuth } from "@/context/AuthContext";
 
 const AuthModal = dynamic(
@@ -40,7 +40,7 @@ const homeNavItems = [
 export function AppShell({ children }: AppShellProps) {
   const pathname = usePathname();
   const isHome = pathname === routes.home;
-  const { isLoggedIn } = useAuth();
+  const { isLoggedIn, publicAddress } = useAuth();
   const [authOpen, setAuthOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
   const { profile, hasName } = useCreatorProfile();
@@ -86,10 +86,14 @@ export function AppShell({ children }: AppShellProps) {
               </button>
             )
           ) : (
-            <button className="wallet-pill" type="button" aria-label="Connected wallet 9a4F...FF32">
-              <span className="wallet-dot" />
-              9a4F...FF32
-            </button>
+            <>
+              {publicAddress ? (
+                <button className="wallet-pill" type="button" aria-label={`Connected wallet ${publicAddress}`} onClick={() => setProfileOpen(true)}>
+                  <span className="wallet-dot" />
+                  {formatWallet(publicAddress)}
+                </button>
+              ) : null}
+            </>
           )}
           <button
             className={hasName ? "nav-avatar nav-avatar-has-profile" : "nav-avatar"}
