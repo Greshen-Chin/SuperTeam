@@ -7762,3 +7762,992 @@ button[class*="bg-emerald"]:hover {
     display: none;
   }
 }
+
+/* ── Market page ─────────────────────────────────────────────────────────── */
+
+.market-page {
+  max-width: 1000px;
+  margin: 0 auto;
+  padding: 2.5rem 1.5rem 4rem;
+}
+
+.market-hero {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 2rem;
+  margin-bottom: 2.5rem;
+  flex-wrap: wrap;
+}
+
+.market-eyebrow {
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  color: var(--purple);
+  margin: 0 0 0.5rem;
+}
+
+.market-hero h1 {
+  font-size: 2rem;
+  font-weight: 800;
+  color: #fff;
+  margin: 0 0 0.6rem;
+  line-height: 1.15;
+}
+
+.market-subtitle {
+  font-size: 0.85rem;
+  color: var(--app-muted);
+  max-width: 480px;
+  margin: 0;
+  line-height: 1.6;
+}
+
+.market-stats {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  background: var(--app-panel);
+  border: 1px solid var(--app-line);
+  border-radius: 14px;
+  padding: 1rem 1.5rem;
+  flex-shrink: 0;
+}
+
+.market-stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.2rem;
+}
+
+.market-stat strong {
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: #fff;
+  line-height: 1;
+}
+
+.market-stat span {
+  font-size: 0.7rem;
+  color: var(--app-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.market-stat-divider {
+  width: 1px;
+  height: 36px;
+  background: var(--app-line);
+}
+
+.text-mint { color: var(--mint); }
+
+.market-loading {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  color: var(--app-muted);
+  font-size: 0.875rem;
+  padding: 3rem 0;
+}
+
+@keyframes market-spin {
+  to { transform: rotate(360deg); }
+}
+
+.market-spinner { animation: market-spin 0.9s linear infinite; }
+
+/* Sections */
+
+.market-section {
+  margin-bottom: 2.5rem;
+}
+
+.market-section-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+  color: var(--app-muted);
+}
+
+.market-section-header h2 {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #fff;
+  margin: 0;
+}
+
+.market-section-count {
+  font-size: 0.72rem;
+  background: var(--app-panel-strong);
+  border: 1px solid var(--app-line);
+  border-radius: 999px;
+  padding: 0.1rem 0.55rem;
+  color: var(--app-muted);
+  margin-left: auto;
+}
+
+/* Grid of listing cards */
+
+.market-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 1rem;
+}
+
+/* Listing card */
+
+.market-listing-card {
+  background: var(--app-panel);
+  border: 1px solid var(--app-line);
+  border-radius: 16px;
+  padding: 1.1rem 1.2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  transition: border-color 200ms, box-shadow 200ms;
+}
+
+.market-listing-card.is-listed {
+  border-color: rgba(153, 69, 255, 0.35);
+  box-shadow: 0 0 0 1px rgba(153, 69, 255, 0.12) inset;
+}
+
+.market-listing-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.market-listing-status {
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  border-radius: 999px;
+  padding: 0.15rem 0.55rem;
+}
+
+.market-listing-status.listed {
+  background: rgba(153, 69, 255, 0.15);
+  color: var(--purple);
+}
+
+.market-listing-status.unlisted {
+  background: var(--app-panel-strong);
+  color: var(--app-muted);
+}
+
+.market-listing-cert {
+  color: var(--app-muted);
+  display: grid;
+  place-items: center;
+  opacity: 0.5;
+  transition: opacity 150ms;
+}
+
+.market-listing-cert:hover { opacity: 1; }
+
+.market-listing-title {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #fff;
+  margin: 0;
+  line-height: 1.35;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+.market-listing-date {
+  font-size: 0.72rem;
+  color: var(--app-muted);
+  margin: 0;
+}
+
+.market-listing-price {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  margin-top: 0.2rem;
+}
+
+.market-sol-badge {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--mint);
+  font-family: monospace;
+}
+
+.market-listing-fee {
+  font-size: 0.68rem;
+  color: var(--app-muted);
+}
+
+.market-listing-hint {
+  font-size: 0.75rem;
+  color: var(--app-muted);
+  margin: 0.2rem 0 0;
+  line-height: 1.5;
+}
+
+.market-edit-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin-top: auto;
+  padding-top: 0.6rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--purple);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding-left: 0;
+  transition: color 150ms;
+}
+
+.market-edit-btn:hover { color: #c084fc; }
+
+/* License cards */
+
+.market-license-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.market-license-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  background: var(--app-panel);
+  border: 1px solid var(--app-line);
+  border-radius: 14px;
+  padding: 1rem 1.2rem;
+  flex-wrap: wrap;
+}
+
+.market-license-left {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  min-width: 0;
+}
+
+.market-license-icon { color: var(--mint); flex-shrink: 0; }
+
+.market-license-title {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #fff;
+  margin: 0 0 0.15rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 300px;
+}
+
+.market-license-meta {
+  font-size: 0.72rem;
+  color: var(--app-muted);
+  margin: 0;
+}
+
+.market-license-right {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-shrink: 0;
+}
+
+.market-license-view {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--purple);
+  text-decoration: none;
+  transition: color 150ms;
+}
+
+.market-license-view:hover { color: #c084fc; }
+
+/* Empty states */
+
+.market-empty {
+  background: var(--app-panel);
+  border: 1px dashed var(--app-line);
+  border-radius: 14px;
+  padding: 2rem;
+  text-align: center;
+  color: var(--app-muted);
+  font-size: 0.875rem;
+}
+
+.market-empty p { margin: 0 0 0.5rem; }
+
+.market-empty-hint {
+  font-size: 0.75rem !important;
+  opacity: 0.7;
+}
+
+.market-empty-link {
+  display: inline-block;
+  margin-top: 0.75rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--purple);
+  text-decoration: none;
+}
+
+.market-empty-link:hover { text-decoration: underline; }
+
+.market-empty-auth {
+  text-align: center;
+  padding: 6rem 1rem;
+  color: var(--app-muted);
+}
+
+.market-empty-icon {
+  color: var(--purple);
+  margin-bottom: 1rem;
+  opacity: 0.7;
+}
+
+.market-empty-auth h2 {
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: #fff;
+  margin: 0 0 0.5rem;
+}
+
+.market-empty-auth p {
+  font-size: 0.875rem;
+  max-width: 380px;
+  margin: 0 auto;
+}
+
+/* Set price modal */
+
+.market-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(6px);
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+}
+
+.market-modal {
+  background: #13131c;
+  border: 1px solid rgba(153, 69, 255, 0.3);
+  border-radius: 20px;
+  width: 100%;
+  max-width: 420px;
+  box-shadow: 0 0 60px rgba(153, 69, 255, 0.12);
+}
+
+.market-modal-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: 1.2rem 1.4rem 0;
+  color: var(--purple);
+}
+
+.market-modal-header > div { flex: 1; min-width: 0; }
+
+.market-modal-header h3 {
+  font-size: 1rem;
+  font-weight: 700;
+  color: #fff;
+  margin: 0 0 0.15rem;
+}
+
+.market-modal-header p {
+  font-size: 0.75rem;
+  color: var(--app-muted);
+  margin: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.market-modal-close {
+  background: none;
+  border: none;
+  color: var(--app-muted);
+  cursor: pointer;
+  padding: 0;
+  transition: color 150ms;
+}
+
+.market-modal-close:hover { color: #fff; }
+
+.market-modal-body {
+  padding: 1.2rem 1.4rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.market-price-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--app-muted);
+}
+
+.market-price-input-wrap {
+  display: flex;
+  align-items: center;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--app-line);
+  border-radius: 10px;
+  overflow: hidden;
+  transition: border-color 150ms;
+}
+
+.market-price-input-wrap:focus-within {
+  border-color: rgba(153, 69, 255, 0.5);
+}
+
+.market-price-prefix,
+.market-price-suffix {
+  padding: 0 0.75rem;
+  font-size: 0.85rem;
+  color: var(--app-muted);
+  white-space: nowrap;
+}
+
+.market-price-input {
+  flex: 1;
+  background: none;
+  border: none;
+  outline: none;
+  color: #fff;
+  font-size: 1.1rem;
+  font-weight: 700;
+  padding: 0.65rem 0;
+  text-align: center;
+  width: 0;
+}
+
+.market-price-input::placeholder { color: rgba(255,255,255,0.2); }
+
+/* Chrome number input arrow removal */
+.market-price-input::-webkit-outer-spin-button,
+.market-price-input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+.market-price-input[type=number] { -moz-appearance: textfield; }
+
+.market-split-preview {
+  background: rgba(20, 241, 149, 0.06);
+  border: 1px solid rgba(20, 241, 149, 0.15);
+  border-radius: 10px;
+  padding: 0.75rem 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.market-split-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.8rem;
+}
+
+.market-split-row span { color: var(--app-muted); }
+.market-split-row strong { font-weight: 700; }
+.market-split-fee { color: var(--app-muted) !important; font-family: monospace; }
+
+.market-modal-hint {
+  font-size: 0.72rem;
+  color: var(--app-muted);
+  line-height: 1.55;
+  margin: 0;
+}
+
+.market-modal-footer {
+  display: flex;
+  gap: 0.75rem;
+  padding: 0 1.4rem 1.4rem;
+}
+
+.market-cancel-btn {
+  flex: 1;
+  padding: 0.65rem;
+  border-radius: 10px;
+  border: 1px solid var(--app-line);
+  background: none;
+  color: var(--app-muted);
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color 150ms, color 150ms;
+}
+
+.market-cancel-btn:hover { border-color: var(--app-muted); color: #fff; }
+
+.market-save-btn {
+  flex: 2;
+  padding: 0.65rem;
+  border-radius: 10px;
+  border: none;
+  background: var(--purple);
+  color: #fff;
+  font-size: 0.85rem;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  transition: opacity 150ms;
+}
+
+.market-save-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+.market-save-btn:not(:disabled):hover { opacity: 0.88; }
+
+.market-btn-spinner { animation: market-spin 0.9s linear infinite; }
+
+/* ── License certificate page ────────────────────────────────────────────── */
+
+.license-cert-page {
+  max-width: 680px;
+  margin: 0 auto;
+  padding: 2.5rem 1.5rem 4rem;
+}
+
+.license-cert-loading,
+.license-cert-error {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  color: var(--app-muted);
+  font-size: 0.875rem;
+  padding: 4rem 1.5rem;
+  max-width: 680px;
+  margin: 0 auto;
+}
+
+.license-cert-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  color: var(--mint);
+  background: rgba(20, 241, 149, 0.08);
+  border: 1px solid rgba(20, 241, 149, 0.2);
+  border-radius: 999px;
+  padding: 0.25rem 0.75rem;
+  margin-bottom: 1.25rem;
+}
+
+.license-cert-title {
+  font-size: 1.9rem;
+  font-weight: 800;
+  color: #fff;
+  margin: 0 0 0.75rem;
+  line-height: 1.2;
+}
+
+.license-cert-subtitle {
+  font-size: 0.85rem;
+  color: var(--app-muted);
+  margin: 0 0 1.5rem;
+  line-height: 1.6;
+}
+
+.license-cert-banner {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+  border-radius: 10px;
+  padding: 0.7rem 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.license-cert-banner.active {
+  background: rgba(20, 241, 149, 0.08);
+  border: 1px solid rgba(20, 241, 149, 0.2);
+  color: var(--mint);
+}
+
+.license-cert-banner.revoked {
+  background: rgba(255, 107, 107, 0.08);
+  border: 1px solid rgba(255, 107, 107, 0.2);
+  color: var(--coral);
+}
+
+.license-cert-card {
+  background: var(--app-panel);
+  border: 1px solid var(--app-line);
+  border-radius: 16px;
+  padding: 1.25rem 1.5rem;
+  margin-bottom: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.license-cert-card-title {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--app-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin: 0 0 0.75rem;
+}
+
+.license-cert-field {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 1rem;
+  padding: 0.55rem 0;
+  border-bottom: 1px solid var(--app-line);
+}
+
+.license-cert-field:last-child { border-bottom: none; }
+
+.license-cert-label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--app-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.license-cert-value {
+  font-size: 0.8rem;
+  color: #fff;
+  text-align: right;
+  word-break: break-all;
+  margin: 0;
+}
+
+.license-cert-payment { gap: 0; }
+
+.license-payment-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid var(--app-line);
+  font-size: 0.82rem;
+}
+
+.license-payment-row span { color: var(--app-muted); }
+.license-payment-row strong { font-weight: 700; color: #fff; font-family: monospace; }
+
+.license-payment-sig {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.6rem 0 0;
+  font-size: 0.75rem;
+}
+
+.license-payment-sig > span:first-child { color: var(--app-muted); }
+
+.license-sig-mock {
+  font-size: 0.72rem;
+  background: rgba(255, 179, 71, 0.1);
+  color: var(--amber);
+  border-radius: 999px;
+  padding: 0.1rem 0.5rem;
+}
+
+.license-sig-link {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  color: var(--purple);
+  font-family: monospace;
+  text-decoration: none;
+  font-size: 0.75rem;
+}
+
+.license-sig-link:hover { text-decoration: underline; }
+
+.license-explorer-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+  padding: 0.65rem 1.25rem;
+  border-radius: 10px;
+  background: var(--purple);
+  color: #fff;
+  font-size: 0.85rem;
+  font-weight: 700;
+  text-decoration: none;
+  transition: opacity 150ms;
+}
+
+.license-explorer-btn:hover { opacity: 0.85; }
+
+/* ── Certificate page — license additions ────────────────────────────────── */
+
+.cert-license-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: var(--purple);
+  background: rgba(153, 69, 255, 0.1);
+  border: 1px solid rgba(153, 69, 255, 0.25);
+  border-radius: 999px;
+  padding: 0.2rem 0.65rem;
+}
+
+.cert-buy-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  height: 2.75rem;
+  padding: 0 1.1rem;
+  border-radius: 0.5rem;
+  border: none;
+  background: var(--purple);
+  color: #fff;
+  font-size: 0.875rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: opacity 150ms;
+  white-space: nowrap;
+}
+
+.cert-buy-btn:hover { opacity: 0.88; }
+
+.cert-manage-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  height: 2.75rem;
+  padding: 0 1rem;
+  border-radius: 0.5rem;
+  border: 1px solid rgba(153, 69, 255, 0.35);
+  color: var(--purple);
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-decoration: none;
+  transition: border-color 150ms, color 150ms;
+}
+
+.cert-manage-link:hover { border-color: var(--purple); color: #c084fc; }
+
+/* ── Buy license panel ───────────────────────────────────────────────────── */
+
+.buy-license-panel {
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+.buy-panel-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  margin-bottom: 1.25rem;
+  color: var(--purple);
+}
+
+.buy-panel-header > div { flex: 1; }
+
+.buy-panel-header h3 {
+  font-size: 1.1rem;
+  font-weight: 800;
+  color: #fff;
+  margin: 0 0 0.2rem;
+}
+
+.buy-panel-header p {
+  font-size: 0.8rem;
+  color: var(--app-muted);
+  margin: 0;
+}
+
+.buy-panel-video {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #fff;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--app-line);
+  border-radius: 10px;
+  padding: 0.65rem 0.9rem;
+  margin-bottom: 1rem;
+}
+
+.buy-panel-shield { color: var(--mint); flex-shrink: 0; }
+
+.buy-panel-breakdown {
+  background: rgba(153, 69, 255, 0.06);
+  border: 1px solid rgba(153, 69, 255, 0.18);
+  border-radius: 12px;
+  padding: 0.85rem 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.buy-breakdown-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.82rem;
+}
+
+.buy-breakdown-row span { color: var(--app-muted); }
+.buy-breakdown-row strong { font-weight: 700; color: #fff; font-family: monospace; }
+.buy-breakdown-creator { color: var(--mint) !important; font-family: monospace; }
+.buy-breakdown-fee { color: var(--app-muted) !important; font-family: monospace; }
+
+.buy-panel-includes {
+  margin-bottom: 1.25rem;
+}
+
+.buy-includes-title {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--app-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin: 0 0 0.6rem;
+}
+
+.buy-includes-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.buy-include-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.78rem;
+  color: var(--app-muted);
+}
+
+.buy-include-item svg { color: var(--mint); flex-shrink: 0; }
+
+.buy-panel-warn {
+  font-size: 0.78rem;
+  color: var(--amber);
+  margin: 0 0 0.75rem;
+  text-align: center;
+}
+
+.buy-confirm-btn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.85rem;
+  border-radius: 12px;
+  border: none;
+  background: var(--purple);
+  color: #fff;
+  font-size: 0.95rem;
+  font-weight: 800;
+  cursor: pointer;
+  transition: opacity 150ms;
+}
+
+.buy-confirm-btn:hover:not(:disabled) { opacity: 0.88; }
+.buy-confirm-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+/* Buy panel states */
+
+.buy-panel-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 1.5rem 0 0.5rem;
+  gap: 0.6rem;
+}
+
+@keyframes buy-spin { to { transform: rotate(360deg); } }
+.buy-state-spinner { animation: buy-spin 0.9s linear infinite; color: var(--purple); }
+
+.buy-done-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: rgba(20, 241, 149, 0.15);
+  border: 2px solid var(--mint);
+  display: grid;
+  place-items: center;
+  color: var(--mint);
+}
+
+.buy-state-title {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #fff;
+  margin: 0;
+}
+
+.buy-state-error { color: var(--coral) !important; }
+
+.buy-state-sub {
+  font-size: 0.8rem;
+  color: var(--app-muted);
+  margin: 0;
+}
+
+.buy-view-cert-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin-top: 0.5rem;
+  padding: 0.6rem 1.2rem;
+  border-radius: 10px;
+  background: var(--purple);
+  color: #fff;
+  font-size: 0.85rem;
+  font-weight: 700;
+  text-decoration: none;
+  transition: opacity 150ms;
+}
+
+.buy-view-cert-btn:hover { opacity: 0.85; }
+
+.buy-retry-btn {
+  margin-top: 0.5rem;
+  padding: 0.5rem 1.2rem;
+  border-radius: 10px;
+  border: 1px solid var(--app-line);
+  background: none;
+  color: var(--app-muted);
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color 150ms, color 150ms;
+}
+
+.buy-retry-btn:hover { border-color: var(--app-muted); color: #fff; }

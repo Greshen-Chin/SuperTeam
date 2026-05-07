@@ -11,5 +11,7 @@ export const routes = {
   videoStorage: "/video-storage",
   verify: "/verify",
   certificate: (id: string) => `/certificate/${id}`,
-  cert: (mintAddress: string) => `/cert/${mintAddress}`
+  cert: (mintAddress: string) => `/cert/${mintAddress}`,
+  license: (id: string) => `/license/${id}`,
+  market: "/market"
 };

@@ -1,7 +1,7 @@
 import { demoProof, demoVerificationMatch } from "@/lib/demo-data";
 import { createLocalFingerprint } from "@/lib/fingerprint-client";
 import { routes } from "@/lib/routes";
-import type { Fingerprint, Proof, VerificationResult } from "@/shared/schemas";
+import type { Fingerprint, License, Proof, VerificationResult } from "@/shared/schemas";
 
 export type RegisterProofInput = {
   title: string;
@@ -114,6 +114,91 @@ export const apiClient = {
     return {
       ...demoProof,
       id
+    };
+  },
+
+  async setLicenseTerms(
+    proofId: string,
+    terms: { feeLamports: number; licenseModel: "flat" | "revshare" | "split" }
+  ): Promise<Proof> {
+    if (apiBaseUrl) {
+      const response = await fetch(`${apiBaseUrl}/api/proofs/${proofId}/license-terms`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", ...authHeaders() },
+        body: JSON.stringify({ licenseModel: terms.licenseModel, feeLamports: terms.feeLamports })
+      });
+      return readApiResponse<Proof>(response);
+    }
+    await new Promise((resolve) => setTimeout(resolve, 400));
+    return { ...demoProof, id: proofId, licenseFeeLamports: terms.feeLamports, licenseModel: terms.licenseModel };
+  },
+
+  async getLicensesByBuyer(buyerWallet: string): Promise<License[]> {
+    if (apiBaseUrl) {
+      const params = new URLSearchParams({ buyerWallet });
+      const response = await fetch(`${apiBaseUrl}/api/licenses?${params.toString()}`, { cache: "no-store" });
+      const data = await readApiResponse<{ items: License[]; nextCursor: string | null }>(response);
+      return data.items;
+    }
+    return [];
+  },
+
+  async getLicensesByProof(proofId: string): Promise<License[]> {
+    if (apiBaseUrl) {
+      const response = await fetch(`${apiBaseUrl}/api/proofs/${proofId}/licenses`);
+      const data = await readApiResponse<{ licenses: License[] }>(response);
+      return data.licenses;
+    }
+    return [];
+  },
+
+  async getLicense(id: string): Promise<License> {
+    if (apiBaseUrl) {
+      const response = await fetch(`${apiBaseUrl}/api/licenses/${id}`, { cache: "no-store" });
+      return readApiResponse<License>(response);
+    }
+    return {
+      id,
+      proofId: demoProof.id,
+      buyerWallet: "Demo1111111111111111111111111111111111111111",
+      sellerWallet: demoProof.creatorWallet,
+      licenseModel: "flat",
+      feeLamports: 200_000_000,
+      splitConfig: null,
+      licenseTokenMint: null,
+      solanaSignature: `mock_lic_${id}`,
+      status: "active",
+      createdAt: new Date().toISOString()
+    };
+  },
+
+  async createLicense(input: {
+    proofId: string;
+    buyerWallet: string;
+    feeLamports: number;
+    solanaSignature: string;
+  }): Promise<License> {
+    if (apiBaseUrl) {
+      const response = await fetch(`${apiBaseUrl}/api/licenses`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...authHeaders() },
+        body: JSON.stringify(input)
+      });
+      return readApiResponse<License>(response);
+    }
+    await new Promise((resolve) => setTimeout(resolve, 600));
+    return {
+      id: `lic_demo_${Date.now()}`,
+      proofId: input.proofId,
+      buyerWallet: input.buyerWallet,
+      sellerWallet: demoProof.creatorWallet,
+      licenseModel: "flat",
+      feeLamports: input.feeLamports,
+      splitConfig: null,
+      licenseTokenMint: null,
+      solanaSignature: input.solanaSignature,
+      status: "active",
+      createdAt: new Date().toISOString()
     };
   },
 

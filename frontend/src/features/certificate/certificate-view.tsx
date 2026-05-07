@@ -1,15 +1,26 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Download, ExternalLink, FileText, Link2, Loader2, Share2, ShieldCheck, User } from "lucide-react";
+import Link from "next/link";
+import { Check, Download, ExternalLink, FileText, Link2, Loader2, Share2, ShieldCheck, Tag, User } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { ProfileModal } from "@/features/profile/profile-modal";
 import { useCreatorProfile } from "@/lib/use-creator-profile";
+import { useAuth } from "@/context/AuthContext";
 import { downloadProofReport } from "@/lib/pdf-report";
+import { payForLicense } from "@/lib/blockchain-adapter";
+import { apiClient } from "@/lib/api-client";
+import { routes } from "@/lib/routes";
 import { formatDateTime, formatWallet } from "@/lib/utils";
-import type { Proof } from "@/shared/schemas";
+import type { License, Proof } from "@/shared/schemas";
+
+const PLATFORM_FEE_BPS = 500;
+
+function lamportsToSol(lamports: number) {
+  return (lamports / 1_000_000_000).toFixed(3).replace(/\.?0+$/, "");
+}
 
 type CertificateViewProps = {
   proof: Proof;
@@ -21,9 +32,14 @@ export function CertificateView({ proof }: CertificateViewProps) {
   const [shareOpen, setShareOpen] = useState(false);
   const [downloadOpen, setDownloadOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
+  const [buyOpen, setBuyOpen] = useState(false);
   const stampRef = useRef<HTMLDivElement | null>(null);
   const shareUrl = typeof window === "undefined" ? "" : window.location.href;
   const { profile, hasName } = useCreatorProfile();
+  const { publicAddress } = useAuth();
+
+  const isCreator = !!publicAddress && publicAddress === proof.creatorWallet;
+  const isForSale = proof.licenseFeeLamports > 0;
 
   useEffect(() => {
     const stamp = stampRef.current;
@@ -41,7 +57,15 @@ export function CertificateView({ proof }: CertificateViewProps) {
   return (
     <div className="mx-auto max-w-4xl space-y-6">
       <div>
-        <Badge tone="green">Registered on Solana</Badge>
+        <div className="flex flex-wrap items-center gap-2">
+          <Badge tone="green">Registered on Solana</Badge>
+          {isForSale && (
+            <span className="cert-license-badge">
+              <Tag size={11} />
+              Available for licensing · ◎ {lamportsToSol(proof.licenseFeeLamports)} SOL
+            </span>
+          )}
+        </div>
         <div ref={stampRef} className="protected-stamp mt-4">
           <ShieldCheck size={20} />
           PROTECTED
@@ -72,7 +96,7 @@ export function CertificateView({ proof }: CertificateViewProps) {
           <CertificateField copied={copiedField === "SHA-256"} label="SHA-256" onCopy={copyField} value={proof.sha256} wide />
         </dl>
 
-        <div className="flex flex-col gap-3 border-t border-line pt-5 sm:flex-row">
+        <div className="flex flex-col gap-3 border-t border-line pt-5 sm:flex-row sm:flex-wrap">
           <a
             className="inline-flex h-11 items-center justify-center gap-2 rounded-lg bg-brand-600 px-4 text-sm font-semibold text-white hover:bg-brand-700"
             href={explorerUrl}
@@ -90,6 +114,18 @@ export function CertificateView({ proof }: CertificateViewProps) {
             <Download size={16} />
             Download Report PDF
           </Button>
+          {isForSale && !isCreator && (
+            <button className="cert-buy-btn" type="button" onClick={() => setBuyOpen(true)}>
+              <Tag size={15} />
+              Buy License · ◎ {lamportsToSol(proof.licenseFeeLamports)}
+            </button>
+          )}
+          {isForSale && isCreator && (
+            <Link className="cert-manage-link" href={routes.market}>
+              <Tag size={14} />
+              Manage listing
+            </Link>
+          )}
         </div>
       </Card>
 
@@ -106,6 +142,12 @@ export function CertificateView({ proof }: CertificateViewProps) {
 
       <ShareSheet explorerUrl={explorerUrl} onClose={() => setShareOpen(false)} open={shareOpen} shareUrl={shareUrl} title={proof.title} />
       <ProfileModal open={profileOpen} onClose={() => setProfileOpen(false)} />
+      <BuyLicensePanel
+        open={buyOpen}
+        proof={proof}
+        buyerWallet={publicAddress ?? ""}
+        onClose={() => setBuyOpen(false)}
+      />
     </div>
   );
 }
@@ -286,6 +328,168 @@ function DownloadReportPanel({
             <><Download size={16} />Generate & Download PDF</>
           )}
         </button>
+      </div>
+    </div>
+  );
+}
+
+// ─── Buy License Panel ────────────────────────────────────────────────────────
+
+type BuyLicensePanelProps = {
+  open: boolean;
+  proof: Proof;
+  buyerWallet: string;
+  onClose: () => void;
+};
+
+type BuyStep = "confirm" | "paying" | "done" | "error";
+
+function BuyLicensePanel({ open, proof, buyerWallet, onClose }: BuyLicensePanelProps) {
+  const [step, setStep] = useState<BuyStep>("confirm");
+  const [license, setLicense] = useState<License | null>(null);
+  const [errorMsg, setErrorMsg] = useState("");
+
+  useEffect(() => {
+    if (open) { setStep("confirm"); setLicense(null); setErrorMsg(""); }
+  }, [open]);
+
+  if (!open) return null;
+
+  const feeLamports = proof.licenseFeeLamports;
+  const platformFee = Math.floor((feeLamports * PLATFORM_FEE_BPS) / 10_000);
+  const creatorAmount = feeLamports - platformFee;
+
+  async function handlePay() {
+    if (!buyerWallet) { setErrorMsg("Connect your wallet first."); setStep("error"); return; }
+    setStep("paying");
+    try {
+      const { signature } = await payForLicense({
+        proofId: proof.id,
+        buyerWallet,
+        sellerWallet: proof.creatorWallet,
+        feeLamports
+      });
+      const created = await apiClient.createLicense({
+        proofId: proof.id,
+        buyerWallet,
+        feeLamports,
+        solanaSignature: signature
+      });
+      setLicense(created);
+      setStep("done");
+    } catch (err) {
+      setErrorMsg(err instanceof Error ? err.message : "Payment failed. Please try again.");
+      setStep("error");
+    }
+  }
+
+  return (
+    <div className="share-sheet-backdrop" onMouseDown={onClose}>
+      <div className="share-sheet buy-license-panel" onMouseDown={(e) => e.stopPropagation()}>
+        <div className="share-sheet-handle" />
+
+        {/* Header */}
+        <div className="buy-panel-header">
+          <Tag size={18} />
+          <div>
+            <h3>Buy a License</h3>
+            <p>Get a blockchain-verified right to use this content commercially.</p>
+          </div>
+        </div>
+
+        {step === "confirm" && (
+          <>
+            {/* Video info */}
+            <div className="buy-panel-video">
+              <ShieldCheck size={14} className="buy-panel-shield" />
+              <span>{proof.title}</span>
+            </div>
+
+            {/* Price breakdown */}
+            <div className="buy-panel-breakdown">
+              <div className="buy-breakdown-row">
+                <span>License price</span>
+                <strong>◎ {lamportsToSol(feeLamports)} SOL</strong>
+              </div>
+              <div className="buy-breakdown-row">
+                <span>Creator receives (95%)</span>
+                <span className="buy-breakdown-creator">◎ {lamportsToSol(creatorAmount)} SOL</span>
+              </div>
+              <div className="buy-breakdown-row">
+                <span>VidChain fee (5%)</span>
+                <span className="buy-breakdown-fee">◎ {lamportsToSol(platformFee)} SOL</span>
+              </div>
+            </div>
+
+            {/* What you get */}
+            <div className="buy-panel-includes">
+              <p className="buy-includes-title">Your license includes:</p>
+              <div className="buy-includes-grid">
+                {[
+                  "Blockchain-verified usage certificate",
+                  "On-chain proof of legitimate purchase",
+                  "Downloadable license PDF",
+                  "Public certificate URL to share with platforms",
+                ].map((item) => (
+                  <div className="buy-include-item" key={item}>
+                    <Check size={11} />
+                    {item}
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {!buyerWallet && (
+              <p className="buy-panel-warn">Connect your wallet before purchasing.</p>
+            )}
+
+            <button
+              className="buy-confirm-btn"
+              disabled={!buyerWallet}
+              type="button"
+              onClick={handlePay}
+            >
+              <Tag size={15} />
+              Confirm &amp; Pay ◎ {lamportsToSol(feeLamports)} SOL
+            </button>
+          </>
+        )}
+
+        {step === "paying" && (
+          <div className="buy-panel-state">
+            <Loader2 size={28} className="buy-state-spinner" />
+            <p className="buy-state-title">Processing payment…</p>
+            <p className="buy-state-sub">Sending to Solana · do not close this window.</p>
+          </div>
+        )}
+
+        {step === "done" && license && (
+          <div className="buy-panel-state">
+            <div className="buy-done-icon">
+              <Check size={20} />
+            </div>
+            <p className="buy-state-title">License purchased!</p>
+            <p className="buy-state-sub">Your blockchain-verified certificate is ready.</p>
+            <Link
+              className="buy-view-cert-btn"
+              href={routes.license(license.id)}
+              onClick={onClose}
+            >
+              View your license certificate
+              <ExternalLink size={13} />
+            </Link>
+          </div>
+        )}
+
+        {step === "error" && (
+          <div className="buy-panel-state">
+            <p className="buy-state-title buy-state-error">Payment failed</p>
+            <p className="buy-state-sub">{errorMsg}</p>
+            <button className="buy-retry-btn" type="button" onClick={() => setStep("confirm")}>
+              Try again
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );

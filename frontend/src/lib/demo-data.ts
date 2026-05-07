@@ -11,7 +11,10 @@ export const demoProof: Proof = {
   solanaSignature: "5xDemoSolanaSignatureForProofExplorerPlaceholder111111111",
   metadataUri: "ipfs://demo-proof-metadata",
   registeredAt: new Date().toISOString(),
-  status: "active"
+  status: "active",
+  licenseFeeLamports: 0,
+  licenseModel: "flat",
+  licenseSplit: null
 };
 
 export const demoVerificationMatch: VerificationResult = {

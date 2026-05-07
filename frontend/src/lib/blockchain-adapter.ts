@@ -19,6 +19,32 @@ function explorerUrl(signature: string): string {
   return `https://explorer.solana.com/tx/${signature}${suffix}`;
 }
 
+export type PayForLicenseInput = {
+  proofId: string;
+  buyerWallet: string;
+  sellerWallet: string;
+  feeLamports: number;
+};
+
+export type PayForLicenseResult = {
+  signature: string;
+  explorerUrl: string;
+};
+
+export async function payForLicense(
+  input: PayForLicenseInput
+): Promise<PayForLicenseResult> {
+  if (env.NEXT_PUBLIC_USE_MOCK_CHAIN) {
+    await new Promise((resolve) => setTimeout(resolve, 1100));
+    const signature = `mock_lic_${input.proofId}_${Date.now()}`;
+    return { signature, explorerUrl: explorerUrl(signature) };
+  }
+
+  // Real path: use Solana web3.js to send SOL from buyer to seller
+  // The backend verifies the on-chain TX in POST /api/licenses
+  throw new Error("Real Solana payment not yet implemented. Set NEXT_PUBLIC_USE_MOCK_CHAIN=true for demo.");
+}
+
 export async function registerProofOnChain(
   input: RegisterProofOnChainInput
 ): Promise<RegisterProofOnChainResult> {

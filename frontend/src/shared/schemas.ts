@@ -13,7 +13,24 @@ export const proofSchema = z.object({
   solanaSignature: z.string(),
   metadataUri: z.string().optional(),
   registeredAt: z.string(),
-  status: z.enum(["active", "pending", "archived"])
+  status: z.enum(["active", "pending", "archived"]),
+  licenseFeeLamports: z.number().default(0),
+  licenseModel: z.enum(["flat", "revshare", "split"]).default("flat"),
+  licenseSplit: z.array(z.object({ wallet: z.string(), basisPoints: z.number() })).nullable().default(null)
+});
+
+export const licenseSchema = z.object({
+  id: z.string(),
+  proofId: z.string(),
+  buyerWallet: z.string(),
+  sellerWallet: z.string(),
+  licenseModel: z.enum(["flat", "revshare", "split"]),
+  feeLamports: z.number(),
+  splitConfig: z.array(z.object({ wallet: z.string(), basisPoints: z.number() })).nullable(),
+  licenseTokenMint: z.string().nullable(),
+  solanaSignature: z.string(),
+  status: z.enum(["active", "revoked"]),
+  createdAt: z.string()
 });
 
 export const fingerprintSchema = z.object({
@@ -32,6 +49,7 @@ export const verificationResultSchema = z.object({
 
 export type MatchType = z.infer<typeof matchTypeSchema>;
 export type Proof = z.infer<typeof proofSchema>;
+export type License = z.infer<typeof licenseSchema>;
 export type Fingerprint = z.infer<typeof fingerprintSchema>;
 export type VerificationResult = z.infer<typeof verificationResultSchema>;
 
