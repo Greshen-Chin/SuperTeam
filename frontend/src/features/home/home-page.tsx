@@ -1,9 +1,10 @@
 "use client";
 
 import { memo, useCallback, useEffect, useRef, useState } from "react";
-import type { DragEvent, HTMLAttributes, PointerEvent, ReactNode } from "react";
+import type { DragEvent, HTMLAttributes, MouseEvent as ReactMouseEvent, PointerEvent, ReactNode } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import { AnimatePresence, motion } from "framer-motion";
 import {
   ArrowRight,
@@ -25,12 +26,12 @@ import { TextScramble } from "@/components/ui/text-scramble";
 import { routes } from "@/lib/routes";
 import { cn } from "@/lib/utils";
 import { EntryExperience } from "./entry/entry-experience";
-import { OptimizedBackgroundCanvas } from "./backgrounds/optimized-background-canvas";
-import { CursorTrailCanvas } from "./systems/cursor-trail-canvas";
 import { MasterLoop } from "./systems/master-loop";
-import { SectionProxy } from "./systems/section-proxy";
 
 type SectionId = "hero" | "problem" | "solution" | "how" | "phash" | "dispute" | "cta";
+
+const CursorTrailCanvas = dynamic(() => import("./systems/cursor-trail-canvas").then((module) => module.CursorTrailCanvas), { ssr: false });
+const OptimizedBackgroundCanvas = dynamic(() => import("./backgrounds/optimized-background-canvas").then((module) => module.OptimizedBackgroundCanvas), { ssr: false });
 
 const sections: { id: SectionId; label: string }[] = [
   { id: "hero", label: "Start" },
@@ -43,18 +44,14 @@ const sections: { id: SectionId; label: string }[] = [
 ];
 
 const sectionTints: Record<SectionId, string> = {
-  cta: "#080712",
-  dispute: "#120810",
-  hero: "#080712",
-  how: "#0a0812",
-  phash: "#08120a",
-  problem: "#120808",
-  solution: "#081212"
+  cta: "#05050a",
+  dispute: "#05050a",
+  hero: "#05050a",
+  how: "#05050a",
+  phash: "#05050a",
+  problem: "#05050a",
+  solution: "#05050a"
 };
-
-function isSectionId(value: string): value is SectionId {
-  return sections.some((section) => section.id === value);
-}
 
 export function HomePage() {
   const [activeSection, setActiveSection] = useState<SectionId>("hero");
@@ -67,21 +64,49 @@ export function HomePage() {
       window.history.replaceState(null, "", window.location.pathname);
     }
     window.scrollTo({ top: 0, behavior: "auto" });
+    const idle = window.setTimeout(() => {
+      [routes.register, routes.check, routes.videoStorage, routes.market].forEach((href) => {
+        const link = document.createElement("link");
+        link.rel = "prefetch";
+        link.href = href;
+        document.head.appendChild(link);
+      });
+    }, 900);
+    return () => window.clearTimeout(idle);
   }, []);
 
   useEffect(() => {
-    const observer = new IntersectionObserver(
-      (entries) => {
-        const visible = entries.find((entry) => entry.isIntersecting);
-        if (visible?.target.id && isSectionId(visible.target.id)) setActiveSection(visible.target.id);
-      },
-      { threshold: 0.44 }
-    );
-    sections.forEach((section) => {
-      const element = document.getElementById(section.id);
-      if (element) observer.observe(element);
-    });
-    return () => observer.disconnect();
+    let ticking = false;
+    const updateActiveSection = () => {
+      const centerY = window.innerHeight * 0.52;
+      let nextSection: SectionId = "hero";
+      let bestDistance = Number.POSITIVE_INFINITY;
+      sections.forEach((section) => {
+        const element = document.getElementById(section.id);
+        if (!element) return;
+        const rect = element.getBoundingClientRect();
+        const sectionCenter = rect.top + rect.height / 2;
+        const distance = Math.abs(sectionCenter - centerY);
+        if (distance < bestDistance) {
+          bestDistance = distance;
+          nextSection = section.id;
+        }
+      });
+      setActiveSection(nextSection);
+      ticking = false;
+    };
+    const requestUpdate = () => {
+      if (ticking) return;
+      ticking = true;
+      window.requestAnimationFrame(updateActiveSection);
+    };
+    requestUpdate();
+    window.addEventListener("resize", requestUpdate);
+    window.addEventListener("scroll", requestUpdate, { passive: true });
+    return () => {
+      window.removeEventListener("resize", requestUpdate);
+      window.removeEventListener("scroll", requestUpdate);
+    };
   }, []);
 
   useEffect(() => {
@@ -89,9 +114,11 @@ export function HomePage() {
   }, [activeSection]);
 
   useEffect(() => {
-    const lazySections = loadedSections.map((section) => new SectionProxy(section, () => import("./sections/lifecycle")));
-    return () => lazySections.forEach((section) => section.destroy());
-  }, [loadedSections]);
+    document.documentElement.dataset.homeEntry = entryRevealed ? "revealed" : "locked";
+    return () => {
+      delete document.documentElement.dataset.homeEntry;
+    };
+  }, [entryRevealed]);
 
   const revealHome = useCallback(() => {
     setEntryRevealed(true);
@@ -106,7 +133,8 @@ export function HomePage() {
   return (
     <main className={cn("home-cinematic relative overflow-hidden bg-[#0A0A0F] text-white", !entryRevealed && "home-entry-locked", entryRevealed && "home-entry-revealed")}>
       <DepthParallax />
-      <OptimizedBackgroundCanvas activeSection={activeSection} />
+      <OuterSpaceDetails />
+      {entryRevealed ? <OptimizedBackgroundCanvas activeSection="hero" /> : null}
       {entryRevealed ? <CursorTrailCanvas /> : null}
       {entryRevealed ? <LightBulbCursor /> : null}
       {entryRevealed ? <ProgressRail activeSection={activeSection} /> : null}
@@ -120,21 +148,21 @@ export function HomePage() {
       </button>
 
       <HeroSection />
-      <SectionSlot id="problem" loaded={loadedSections.includes("problem")} transition="crack"><ProblemSection /></SectionSlot>
-      <SectionSlot id="solution" loaded={loadedSections.includes("solution")} transition="vortex"><SolutionSection /></SectionSlot>
-      <SectionSlot id="how" loaded={loadedSections.includes("how")} transition="stamp"><HowSection /></SectionSlot>
-      <SectionSlot id="phash" loaded={loadedSections.includes("phash")} transition="matrix"><PHashSection /></SectionSlot>
-      <SectionSlot id="dispute" loaded={loadedSections.includes("dispute")} transition="chain"><DisputeSection /></SectionSlot>
-      <SectionSlot id="cta" loaded={loadedSections.includes("cta")} transition="supernova"><CTASection /></SectionSlot>
+      <SectionSlot id="problem" loaded={loadedSections.includes("problem")}><ProblemSection /></SectionSlot>
+      <SectionSlot id="solution" loaded={loadedSections.includes("solution")}><SolutionSection /></SectionSlot>
+      <SectionSlot id="how" loaded={loadedSections.includes("how")}><HowSection /></SectionSlot>
+      <SectionSlot id="phash" loaded={loadedSections.includes("phash")}><PHashSection /></SectionSlot>
+      <SectionSlot id="dispute" loaded={loadedSections.includes("dispute")}><DisputeSection /></SectionSlot>
+      <SectionSlot id="cta" loaded={loadedSections.includes("cta")}><CTASection /></SectionSlot>
       {!entryRevealed ? <EntryExperience onReveal={revealHome} /> : null}
     </main>
   );
 }
 
-function SectionSlot({ children, id, loaded, transition }: { children: ReactNode; id: SectionId; loaded: boolean; transition: "chain" | "crack" | "matrix" | "stamp" | "supernova" | "vortex" }) {
+function SectionSlot({ children, id, loaded }: { children: ReactNode; id: SectionId; loaded: boolean }) {
   return (
     <>
-      {loaded ? <CinematicTransition kind={transition} /> : <div aria-hidden className="home-transition-placeholder" />}
+      {loaded ? null : <div aria-hidden className="home-transition-placeholder" />}
       {loaded ? children : <section aria-hidden className={cn("section home-section-placeholder", `playful-${id}`)} id={id} />}
     </>
   );
@@ -143,9 +171,6 @@ function SectionSlot({ children, id, loaded, transition }: { children: ReactNode
 function HeroSection() {
   return (
     <section className="section hero-section playful-section playful-hero relative min-h-screen overflow-hidden px-4 py-20" id="hero">
-      <div className="hero-grid" />
-      <HeroOrbs />
-      <StarField />
       <div className="relative z-10 mx-auto grid min-h-[calc(100vh-10rem)] max-w-6xl items-center gap-10 lg:grid-cols-[0.95fr_1.05fr]">
         <ScrollReveal>
           <p className="font-mono text-sm font-black uppercase tracking-[0.42em] text-emerald-200">Your content. Protected. Forever.</p>
@@ -159,7 +184,7 @@ function HeroSection() {
           <div className="mt-9 flex flex-col gap-4 sm:flex-row">
             <MagneticLink
               className="group inline-flex h-14 items-center justify-center gap-3 rounded-full bg-emerald-300 px-7 text-sm font-black text-black shadow-[0_0_70px_rgba(20,241,149,0.28)] transition hover:scale-105"
-              href={routes.dashboard}
+              href={routes.register}
             >
               Protect My Video
               <ArrowRight size={18} />
@@ -175,18 +200,6 @@ function HeroSection() {
     </section>
   );
 }
-
-const HeroOrbs = memo(function HeroOrbs() {
-  return (
-    <div aria-hidden className="hero-orbs">
-      <div className="orb orb-1" />
-      <div className="orb orb-2" />
-      <div className="orb orb-3" />
-      <div className="orb orb-4" />
-      <div className="orb orb-5" />
-    </div>
-  );
-});
 
 function RobotHero() {
   const pupil1Ref = useRef<HTMLSpanElement | null>(null);
@@ -243,7 +256,6 @@ function RobotHero() {
             <Shield size={30} />
           </motion.div>
           <div className="absolute bottom-7 left-1/2 h-3 w-20 -translate-x-1/2 rounded-full bg-cyan-100 shadow-[0_0_24px_rgba(165,243,252,0.65)]" />
-          <motion.div animate={{ rotate: 360 }} className="absolute -inset-12 rounded-full border border-dashed border-emerald-200/20" transition={{ duration: 30, ease: "linear", repeat: Infinity }} />
         </motion.div>
       </button>
 
@@ -463,7 +475,6 @@ function HowSection() {
     <StorySection eyebrow="Three easy steps" id="how" tone="purple" title="Connect. Upload. Keep proof ready.">
       <div className="grid gap-8">
         <div className="relative grid gap-5 lg:grid-cols-3">
-          <div className="pointer-events-none absolute left-[16%] right-[16%] top-1/2 hidden h-px bg-gradient-to-r from-zinc-700 via-violet-400 to-emerald-300 lg:block" />
           {cards.map((card, index) => (
             <motion.button
               className="cursor-glow-card group relative min-h-80 overflow-hidden rounded-[2rem] border border-white/10 bg-white/[0.05] p-6 text-left backdrop-blur-xl"
@@ -827,14 +838,6 @@ function CTASection() {
   return (
     <section className="section cta-section playful-section playful-cta relative min-h-screen overflow-hidden px-4 py-24" id="cta">
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(153,69,255,0.26),transparent_42%)]" />
-      <div aria-hidden className="cta-rings">
-        <span className="ring" />
-        <span className="ring" />
-        <span className="ring" />
-        <span className="ring" />
-        <span className="ring" />
-      </div>
-      <motion.div animate={{ scale: [0, 2.8], opacity: [0.7, 0] }} className="absolute left-1/2 top-1/2 h-52 w-52 -translate-x-1/2 -translate-y-1/2 rounded-full border border-emerald-200/50" transition={{ duration: 2.8, repeat: Infinity }} />
       <div className="relative z-10 mx-auto grid min-h-[calc(100vh-12rem)] max-w-5xl place-items-center text-center">
         <ScrollReveal>
           <GuardianMini large />
@@ -843,7 +846,7 @@ function CTASection() {
           <div className="mt-10 flex flex-col justify-center gap-4 sm:flex-row">
             <MagneticLink
               className="rounded-full bg-emerald-300 px-8 py-4 font-black text-black shadow-[0_0_70px_rgba(20,241,149,0.28)] transition"
-              href={routes.dashboard}
+              href={routes.register}
             >
               Protect My Video
             </MagneticLink>
@@ -918,6 +921,34 @@ const DepthParallax = memo(function DepthParallax() {
       <div className="vidchain-blob vidchain-blob-one" />
       <div className="vidchain-blob vidchain-blob-two" />
       <div className="vidchain-blob vidchain-blob-three" />
+    </div>
+  );
+});
+
+const OuterSpaceDetails = memo(function OuterSpaceDetails() {
+  return (
+    <div aria-hidden className="home-space-details">
+      <div className="home-star-dust home-star-dust-one" />
+      <div className="home-star-dust home-star-dust-two" />
+      <span className="home-space-planet home-space-planet-mercury" />
+      <span className="home-space-planet home-space-planet-venus" />
+      <span className="home-space-planet home-space-planet-earth" />
+      <span className="home-space-planet home-space-planet-mars" />
+      <span className="home-space-planet home-space-planet-neptune" />
+      <span className="home-space-comet home-space-comet-one" />
+      <span className="home-space-comet home-space-comet-two" />
+      <motion.div animate={{ y: [0, -9, 0], rotate: [-2, 2, -2] }} className="home-hanging-robot home-hanging-robot-one" transition={{ duration: 6.4, repeat: Infinity, ease: "easeInOut" }}>
+        <span className="home-robot-cable" />
+        <span className="home-robot-pod"><Bot size={20} /></span>
+      </motion.div>
+      <motion.div animate={{ y: [0, 11, 0], rotate: [3, -2, 3] }} className="home-hanging-robot home-hanging-robot-two" transition={{ duration: 7.8, repeat: Infinity, ease: "easeInOut" }}>
+        <span className="home-robot-cable" />
+        <span className="home-robot-pod"><Bot size={18} /></span>
+      </motion.div>
+      <motion.div animate={{ y: [0, -7, 0], rotate: [-3, 1, -3] }} className="home-hanging-robot home-hanging-robot-three" transition={{ duration: 8.6, repeat: Infinity, ease: "easeInOut" }}>
+        <span className="home-robot-cable" />
+        <span className="home-robot-pod"><Bot size={16} /></span>
+      </motion.div>
     </div>
   );
 });
@@ -1026,68 +1057,32 @@ function ScrollReveal({ children, className }: { children: ReactNode; className?
 }
 
 function ProgressRail({ activeSection }: { activeSection: SectionId }) {
+  const goToSection = (sectionId: SectionId) => (event: ReactMouseEvent<HTMLAnchorElement>) => {
+    event.preventDefault();
+    document.getElementById(sectionId)?.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
+
   return (
-    <nav className="fixed right-5 top-1/2 z-[60] hidden -translate-y-1/2 flex-col gap-3 md:flex" aria-label="Landing sections">
+    <nav className="home-section-rail fixed right-5 top-1/2 z-[60] hidden -translate-y-1/2 flex-col gap-3 md:flex" aria-label="Landing sections">
       {sections.map((section) => (
-        <a className="group relative grid h-4 w-4 place-items-center" href={`#${section.id}`} key={section.id}>
-          <span className={cn("h-2 w-2 rounded-full border border-white/25 bg-white/20 transition", activeSection === section.id && "h-4 w-4 animate-pulse bg-emerald-300 shadow-[0_0_28px_rgba(20,241,149,0.7)]")} />
+        <a
+          aria-current={activeSection === section.id ? "true" : undefined}
+          className="group relative grid h-8 w-8 place-items-center"
+          data-active={activeSection === section.id ? "true" : "false"}
+          href={`#${section.id}`}
+          key={section.id}
+          onClick={goToSection(section.id)}
+        >
+          <span className={cn("home-section-dot", `home-section-planet-${section.id}`)}>
+            <span className="home-section-planet-gloss" />
+            <span className="home-section-planet-ring" />
+          </span>
           <span className="pointer-events-none absolute right-7 rounded-full border border-white/10 bg-black/80 px-3 py-1 text-xs font-black opacity-0 backdrop-blur transition group-hover:opacity-100">{section.label}</span>
         </a>
       ))}
     </nav>
   );
 }
-
-function CinematicTransition({ kind }: { kind: "crack" | "vortex" | "stamp" | "matrix" | "coin" | "chain" | "supernova" }) {
-  return (
-    <div className="relative h-48 overflow-hidden bg-black">
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(153,69,255,0.18),transparent_55%)]" />
-      <PerchedRobot kind={kind} />
-      {kind === "crack" ? <svg className="absolute inset-0 h-full w-full" viewBox="0 0 1000 220"><path className="crack-line" d="M500 0 L486 48 L525 82 L470 112 L536 145 L500 220" /></svg> : null}
-      {kind === "vortex" ? <motion.div animate={{ rotate: 360, scale: [0.6, 1.5, 0.6] }} className="absolute left-1/2 top-1/2 h-64 w-64 -translate-x-1/2 -translate-y-1/2 rounded-full border border-dashed border-emerald-200/30" transition={{ duration: 7, repeat: Infinity, ease: "linear" }} /> : null}
-      {kind === "stamp" ? <motion.div animate={{ y: [0, 18, 0], rotate: [-4, 4, -4] }} className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-2xl border-4 border-violet-400/70 px-8 py-4 text-2xl font-black uppercase text-violet-200" transition={{ duration: 2.8, repeat: Infinity }}>Verified on Solana</motion.div> : null}
-      {kind === "matrix" ? <div className="absolute inset-0 matrix-text">0101 af90 b7c3 91bc copy check 77aa</div> : null}
-      {kind === "coin" ? <div className="absolute inset-0 flex items-center justify-center gap-3 text-yellow-200">{Array.from({ length: 18 }, (_, index) => <motion.span animate={{ y: [0, -30, 0], rotate: [0, 360] }} key={index} transition={{ delay: index * 0.06, duration: 2, repeat: Infinity }}>SOL</motion.span>)}</div> : null}
-      {kind === "chain" ? <div className="absolute inset-0 flex items-center justify-center gap-2">{Array.from({ length: 11 }, (_, index) => <motion.span animate={{ y: [index % 2 ? -8 : 8, 0, index % 2 ? -8 : 8] }} className="h-10 w-16 rounded-full border-4 border-cyan-100/25" key={index} transition={{ delay: index * 0.08, duration: 2.4, repeat: Infinity }} />)}</div> : null}
-      {kind === "supernova" ? <motion.div animate={{ scale: [0, 7], opacity: [1, 0] }} className="absolute left-1/2 top-1/2 h-20 w-20 -translate-x-1/2 -translate-y-1/2 rounded-full bg-white" transition={{ duration: 2.4, repeat: Infinity }} /> : null}
-    </div>
-  );
-}
-
-const PerchedRobot = memo(function PerchedRobot({ kind }: { kind: "chain" | "coin" | "crack" | "matrix" | "stamp" | "supernova" | "vortex" }) {
-  const left = {
-    chain: "left-[69%]",
-    coin: "left-[58%]",
-    crack: "left-[18%]",
-    matrix: "left-[48%]",
-    stamp: "left-[38%]",
-    supernova: "left-[50%]",
-    vortex: "left-[78%]"
-  }[kind];
-
-  return (
-    <motion.div
-      animate={{ rotate: [-4, 5, -4], y: [0, -10, 0] }}
-      className={cn("pointer-events-none absolute top-5 z-20 hidden h-24 w-24 -translate-x-1/2 md:block", left)}
-      transition={{ duration: 3.6, ease: "easeInOut", repeat: Infinity }}
-    >
-      <motion.div
-        animate={{ scaleY: [1, 0.92, 1] }}
-        className="absolute left-1/2 top-4 h-16 w-16 -translate-x-1/2 rounded-2xl border border-cyan-100/25 bg-black/80 shadow-[0_0_50px_rgba(20,241,149,0.22)] backdrop-blur"
-        transition={{ duration: 1.8, repeat: Infinity }}
-      >
-        <span className="absolute left-4 top-5 h-2.5 w-2.5 rounded-full bg-cyan-100 shadow-[0_0_14px_rgba(165,243,252,0.9)]" />
-        <span className="absolute right-4 top-5 h-2.5 w-2.5 rounded-full bg-cyan-100 shadow-[0_0_14px_rgba(165,243,252,0.9)]" />
-        <span className="absolute bottom-4 left-1/2 h-1.5 w-7 -translate-x-1/2 rounded-full bg-emerald-200 shadow-[0_0_16px_rgba(20,241,149,0.8)]" />
-      </motion.div>
-      <motion.div animate={{ scaleX: [0.7, 1, 0.7], opacity: [0.28, 0.6, 0.28] }} className="absolute bottom-1 left-1/2 h-2 w-24 -translate-x-1/2 rounded-full bg-emerald-200/50 blur-sm" transition={{ duration: 2.4, repeat: Infinity }} />
-    </motion.div>
-  );
-});
-
-const StarField = memo(function StarField() {
-  return <div className="pointer-events-none absolute inset-0 opacity-55 dot-grid" />;
-});
 
 const GuardianMini = memo(function GuardianMini({ large = false }: { large?: boolean }) {
   return (
@@ -1096,7 +1091,6 @@ const GuardianMini = memo(function GuardianMini({ large = false }: { large?: boo
       <div className={cn("relative grid place-items-center rounded-3xl border border-white/15 bg-black/75 shadow-[0_0_90px_rgba(153,69,255,0.26)]", large ? "h-28 w-28" : "h-20 w-20")}>
         <Bot className="text-emerald-200" size={large ? 48 : 32} />
       </div>
-      <motion.div animate={{ rotate: 360 }} className="absolute h-full w-full rounded-full border border-dashed border-emerald-200/20" transition={{ duration: 24, repeat: Infinity, ease: "linear" }} />
     </motion.div>
   );
 });

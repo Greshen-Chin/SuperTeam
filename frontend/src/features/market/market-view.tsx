@@ -5,6 +5,7 @@ import Link from "next/link";
 import {
   Check, ExternalLink, Loader2, Pencil, Search, ShieldCheck, SlidersHorizontal, Store, Tag, X
 } from "lucide-react";
+import { PageCursorEffects } from "@/components/ui/page-cursor-effects";
 import { apiClient } from "@/lib/api-client";
 import { payForLicense } from "@/lib/blockchain-adapter";
 import { useAuth } from "@/context/AuthContext";
@@ -132,6 +133,7 @@ export function MarketView() {
 
   return (
     <div className="market-page">
+      <PageCursorEffects variant="market" />
       <MarketParticleCanvas />
       <div className="market-energy-orbs" aria-hidden>
         <span className="market-energy-orb market-energy-orb-1" />
