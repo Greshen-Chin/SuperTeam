@@ -12,6 +12,8 @@ export const proofSchema = z.object({
   fingerprintRoot: z.string(),
   solanaSignature: z.string(),
   metadataUri: z.string().optional(),
+  ipfsVideoUri: z.string().optional().nullable(),
+  ipfsThumbnailUri: z.string().optional().nullable(),
   registeredAt: z.string(),
   status: z.enum(["active", "pending", "archived"]),
   licenseFeeLamports: z.number().default(0),
