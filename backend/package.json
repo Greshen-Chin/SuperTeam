@@ -3,6 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
+  "main": "src/app.ts",
   "scripts": {
     "db:check": "tsx src/scripts/check-db.ts",
     "db:migrate": "tsx src/scripts/migrate-db.ts",
