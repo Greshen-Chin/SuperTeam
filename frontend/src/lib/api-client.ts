@@ -20,7 +20,20 @@ type ApiResponse<T> = {
   requestId: string;
 };
 
-const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL;
+const configuredApiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL;
+
+function getApiBaseUrl(): string | undefined {
+  if (
+    typeof window !== "undefined" &&
+    configuredApiBaseUrl &&
+    /^(http:\/\/)?(localhost|127\.0\.0\.1)(:\d+)?/i.test(configuredApiBaseUrl) &&
+    !["localhost", "127.0.0.1"].includes(window.location.hostname)
+  ) {
+    return window.location.origin;
+  }
+
+  return configuredApiBaseUrl;
+}
 
 async function readApiResponse<T>(response: Response): Promise<T> {
   const payload = (await response.json()) as ApiResponse<T>;
@@ -38,6 +51,7 @@ export const apiClient = {
   },
 
   async uploadFile(file: File): Promise<{ ipfsUrl: string; gatewayUrl: string }> {
+    const apiBaseUrl = getApiBaseUrl();
     if (apiBaseUrl) {
       const form = new FormData();
       form.append("file", file, file.name);
@@ -55,6 +69,7 @@ export const apiClient = {
   },
 
   async registerProof(input: RegisterProofInput): Promise<Proof> {
+    const apiBaseUrl = getApiBaseUrl();
     if (apiBaseUrl) {
       const response = await fetch(`${apiBaseUrl}/api/proofs`, {
         method: "POST",
@@ -87,6 +102,7 @@ export const apiClient = {
     creatorWallet: string,
     opts?: { cursor?: string; limit?: number; signal?: AbortSignal }
   ): Promise<{ proofs: Proof[]; nextCursor: string | null }> {
+    const apiBaseUrl = getApiBaseUrl();
     if (apiBaseUrl) {
       const params = new URLSearchParams({ creatorWallet });
       if (opts?.cursor) params.set("cursor", opts.cursor);
@@ -104,6 +120,7 @@ export const apiClient = {
   },
 
   async listForSaleProofs(opts?: { excludeWallet?: string; cursor?: string; limit?: number; signal?: AbortSignal }): Promise<{ proofs: Proof[]; nextCursor: string | null }> {
+    const apiBaseUrl = getApiBaseUrl();
     if (apiBaseUrl) {
       const params = new URLSearchParams({ forSale: "true" });
       if (opts?.excludeWallet) params.set("excludeWallet", opts.excludeWallet);
@@ -116,6 +133,7 @@ export const apiClient = {
   },
 
   async getProof(id: string, opts?: { signal?: AbortSignal }): Promise<Proof> {
+    const apiBaseUrl = getApiBaseUrl();
     if (apiBaseUrl) {
       const response = await fetch(`${apiBaseUrl}/api/proofs/${id}`, {
         cache: "no-store",
@@ -136,6 +154,7 @@ export const apiClient = {
     proofId: string,
     terms: { feeLamports: number; licenseModel: "flat" | "revshare" | "split"; walletAddress?: string | null }
   ): Promise<Proof> {
+    const apiBaseUrl = getApiBaseUrl();
     if (apiBaseUrl) {
       const body: Record<string, unknown> = { licenseModel: terms.licenseModel, feeLamports: terms.feeLamports };
       if (terms.walletAddress) body.walletAddress = terms.walletAddress;
@@ -151,6 +170,7 @@ export const apiClient = {
   },
 
   async getLicensesByBuyer(buyerWallet: string, opts?: { signal?: AbortSignal }): Promise<License[]> {
+    const apiBaseUrl = getApiBaseUrl();
     if (apiBaseUrl) {
       const params = new URLSearchParams({ buyerWallet });
       const response = await fetch(`${apiBaseUrl}/api/licenses?${params.toString()}`, { cache: "no-store", signal: opts?.signal });
@@ -161,6 +181,7 @@ export const apiClient = {
   },
 
   async getLicensesByProof(proofId: string): Promise<License[]> {
+    const apiBaseUrl = getApiBaseUrl();
     if (apiBaseUrl) {
       const response = await fetch(`${apiBaseUrl}/api/proofs/${proofId}/licenses`);
       const data = await readApiResponse<{ licenses: License[] }>(response);
@@ -170,6 +191,7 @@ export const apiClient = {
   },
 
   async getLicense(id: string): Promise<License> {
+    const apiBaseUrl = getApiBaseUrl();
     if (apiBaseUrl) {
       const response = await fetch(`${apiBaseUrl}/api/licenses/${id}`, { cache: "no-store" });
       return readApiResponse<License>(response);
@@ -195,6 +217,7 @@ export const apiClient = {
     feeLamports: number;
     solanaSignature: string;
   }): Promise<License> {
+    const apiBaseUrl = getApiBaseUrl();
     if (apiBaseUrl) {
       const response = await fetch(`${apiBaseUrl}/api/licenses`, {
         method: "POST",
@@ -220,6 +243,7 @@ export const apiClient = {
   },
 
   async verifyVideo(file: File): Promise<VerificationResult> {
+    const apiBaseUrl = getApiBaseUrl();
     if (apiBaseUrl) {
       const fingerprint = await createLocalFingerprint(file);
 
