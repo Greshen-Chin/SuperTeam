@@ -1,4 +1,5 @@
 import { buildApp } from "./build-app.js";
+import { config } from "./config.js";
 import { migrate } from "./db.js";
 
 const app = await buildApp();
@@ -12,4 +13,9 @@ try {
   );
 }
 
-export default app;
+try {
+  await app.listen({ host: config.host, port: config.port });
+} catch (error) {
+  app.log.error(error);
+  process.exit(1);
+}
