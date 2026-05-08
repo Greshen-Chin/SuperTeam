@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import {
   Check, ExternalLink, Loader2, Pencil, Search, ShieldCheck, SlidersHorizontal, Store, Tag, X
@@ -29,8 +29,6 @@ function creatorReceives(feeLamports: number) {
   return feeLamports - Math.floor((feeLamports * PLATFORM_FEE_BPS) / 10_000);
 }
 
-type SortKey = "newest" | "oldest" | "price_asc" | "price_desc";
-
 // ── Market page ───────────────────────────────────────────────────────────────
 
 export function MarketView() {
@@ -50,49 +48,56 @@ export function MarketView() {
   // Own proofs + purchased licenses
   useEffect(() => {
     if (!publicAddress) return;
+    const controller = new AbortController();
+    let active = true;
     setLoading(true);
     Promise.all([
-      apiClient.listProofs(publicAddress, { limit: 50 }),
-      apiClient.getLicensesByBuyer(publicAddress)
+      apiClient.listProofs(publicAddress, { limit: 50, signal: controller.signal }),
+      apiClient.getLicensesByBuyer(publicAddress, { signal: controller.signal })
     ])
       .then(async ([{ proofs: items }, bought]) => {
+        if (!active) return;
         setProofs(items);
         setLicenses(bought);
         const uniqueIds = [...new Set(bought.map((l) => l.proofId))];
-        const fetched = await Promise.all(uniqueIds.map((id) => apiClient.getProof(id).catch(() => null)));
+        const fetched = await Promise.all(uniqueIds.map((id) => apiClient.getProof(id, { signal: controller.signal }).catch(() => null)));
+        if (!active) return;
         const map: Record<string, Proof> = {};
         for (const p of fetched) { if (p) map[p.id] = p; }
         setProofMap(map);
       })
-      .finally(() => setLoading(false));
+      .catch((error: unknown) => {
+        if (error instanceof DOMException && error.name === "AbortError") return;
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+    return () => {
+      active = false;
+      controller.abort();
+    };
   }, [publicAddress]);
 
   // Marketplace listings (exclude own)
   useEffect(() => {
+    const controller = new AbortController();
+    let active = true;
     setBrowseLoading(true);
-    apiClient.listForSaleProofs({ excludeWallet: publicAddress ?? undefined, limit: 50 })
-      .then(({ proofs: items }) => setListed(items))
-      .finally(() => setBrowseLoading(false));
+    apiClient.listForSaleProofs({ excludeWallet: publicAddress ?? undefined, limit: 50, signal: controller.signal })
+      .then(({ proofs: items }) => {
+        if (active) setListed(items);
+      })
+      .catch((error: unknown) => {
+        if (error instanceof DOMException && error.name === "AbortError") return;
+      })
+      .finally(() => {
+        if (active) setBrowseLoading(false);
+      });
+    return () => {
+      active = false;
+      controller.abort();
+    };
   }, [publicAddress]);
-
-  const filteredListed = useMemo(() => {
-    let items = listed;
-    if (query.trim()) {
-      const q = query.trim().toLowerCase();
-      items = items.filter(
-        (p) =>
-          p.title.toLowerCase().includes(q) ||
-          (p.creatorHandle ?? "").toLowerCase().includes(q) ||
-          p.creatorWallet.toLowerCase().includes(q)
-      );
-    }
-    switch (sort) {
-      case "oldest":  return [...items].sort((a, b) => a.registeredAt.localeCompare(b.registeredAt));
-      case "price_asc":  return [...items].sort((a, b) => a.licenseFeeLamports - b.licenseFeeLamports);
-      case "price_desc": return [...items].sort((a, b) => b.licenseFeeLamports - a.licenseFeeLamports);
-      default:        return [...items].sort((a, b) => b.registeredAt.localeCompare(a.registeredAt));
-    }
-  }, [listed, query, sort]);
 
   function handlePriceSaved(updated: Proof) {
     setProofs((prev) => prev.map((p) => (p.id === updated.id ? updated : p)));

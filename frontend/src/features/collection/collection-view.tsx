@@ -25,12 +25,26 @@ export function CollectionView() {
 
   useEffect(() => {
     if (!publicAddress) return;
+    const controller = new AbortController();
+    let active = true;
     setLoading(true);
     setError(null);
-    apiClient.listProofs(publicAddress, { limit: 50 })
-      .then(({ proofs: items }) => setProofs(items))
-      .catch(() => setError("Failed to load proofs. Is the backend running?"))
-      .finally(() => setLoading(false));
+    apiClient.listProofs(publicAddress, { limit: 50, signal: controller.signal })
+      .then(({ proofs: items }) => {
+        if (active) setProofs(items);
+      })
+      .catch((error: unknown) => {
+        if (active && !(error instanceof DOMException && error.name === "AbortError")) {
+          setError("Failed to load proofs. Is the backend running?");
+        }
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+    return () => {
+      active = false;
+      controller.abort();
+    };
   }, [publicAddress]);
 
   const visibleProofs = [...proofs].sort((a, b) => {

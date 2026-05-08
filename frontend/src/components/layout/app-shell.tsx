@@ -51,7 +51,7 @@ export function AppShell({ children }: AppShellProps) {
       <ProfileModal open={profileOpen} onClose={() => setProfileOpen(false)} />
       <header className={cn("navbar", isHome && "home-navbar")}>
         <Link className="nav-logo" href={routes.home}>
-          <ShieldLogo />
+          <RobotLogo />
           <span>VidChain</span>
         </Link>
 
@@ -117,18 +117,18 @@ export function AppShell({ children }: AppShellProps) {
   );
 }
 
-function ShieldLogo() {
+function RobotLogo() {
   return (
-    <svg width="22" height="22" viewBox="0 0 20 20" aria-hidden>
-      <path d="M10 1L2 4.5V9c0 4.5 3.5 8.5 8 9.5C15.5 17.5 18 13.5 18 9V4.5L10 1z" fill="url(#vidchain-shield-gradient)" />
-      <path d="M6.2 9.8h7.6M7.1 6.6h5.8" stroke="rgba(255,255,255,0.86)" strokeLinecap="round" strokeWidth="1.35" />
-      <defs>
-        <linearGradient id="vidchain-shield-gradient" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0%" stopColor="#14F195" />
-          <stop offset="54%" stopColor="#4E9BFF" />
-          <stop offset="100%" stopColor="#9945FF" />
-        </linearGradient>
-      </defs>
+    <svg className="nav-robot-logo" width="24" height="24" viewBox="0 0 64 64" aria-hidden>
+      <rect className="nav-robot-logo-bg" width="64" height="64" rx="16" />
+      <g fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M32 15v6" strokeWidth="3.2" />
+        <path d="M26 15h12" strokeWidth="3.2" />
+        <rect x="15" y="23" width="34" height="28" rx="6.5" strokeWidth="4.6" />
+        <path d="M15 36H9v9h6M49 36h6v9h-6" strokeWidth="4.2" />
+        <path d="M25 34v7M39 34v7" strokeWidth="4.4" />
+        <path d="M26 48h12" strokeWidth="3.4" />
+      </g>
     </svg>
   );
 }

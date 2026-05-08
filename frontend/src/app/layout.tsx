@@ -10,7 +10,12 @@ const geistMono = Geist_Mono({ display: "swap", subsets: ["latin"], variable: "-
 
 export const metadata: Metadata = {
   title: "VidChain",
-  description: "Proof-of-origin for Indonesian short-form creators."
+  description: "Proof-of-origin for Indonesian short-form creators.",
+  icons: {
+    apple: "/apple-icon.svg",
+    icon: "/icon.svg",
+    shortcut: "/icon.svg"
+  }
 };
 
 export default function RootLayout({

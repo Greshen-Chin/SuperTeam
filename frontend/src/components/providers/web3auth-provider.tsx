@@ -66,15 +66,13 @@ export function Web3AuthProvider({ children }: { children: React.ReactNode }) {
           { AuthAdapter },
           { CHAIN_NAMESPACES, WEB3AUTH_NETWORK },
           { SolanaPrivateKeyProvider },
-          { getInjectedAdapters },
-          { WalletConnectV2Adapter }
+          { getInjectedAdapters }
         ] = await Promise.all([
           import("@web3auth/modal"),
           import("@web3auth/auth-adapter"),
           import("@web3auth/base"),
           import("@web3auth/solana-provider"),
-          import("@web3auth/default-solana-adapter"),
-          import("@web3auth/wallet-connect-v2-adapter")
+          import("@web3auth/default-solana-adapter")
         ]);
 
         const web3AuthNetwork =
@@ -127,6 +125,7 @@ export function Web3AuthProvider({ children }: { children: React.ReactNode }) {
         // WalletConnect v2 — adds MetaMask Mobile, Trust Wallet, Rainbow, Backpack, etc.
         // Requires NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID (free at cloud.walletconnect.com)
         if (env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID) {
+          const { WalletConnectV2Adapter } = await import("@web3auth/wallet-connect-v2-adapter");
           w3a.configureAdapter(
             new WalletConnectV2Adapter({
               adapterSettings: {

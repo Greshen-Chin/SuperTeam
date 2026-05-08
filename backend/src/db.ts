@@ -2,7 +2,13 @@ import pg from "pg";
 import { config } from "./config.js";
 
 export const pool: pg.Pool | null = config.databaseUrl
-  ? new pg.Pool({ connectionString: config.databaseUrl, ssl: { rejectUnauthorized: false } })
+  ? new pg.Pool({
+      connectionString: config.databaseUrl,
+      ssl: { rejectUnauthorized: false },
+      max: 10,
+      idleTimeoutMillis: 30_000,
+      connectionTimeoutMillis: 5_000
+    })
   : null;
 
 export function requirePool(): pg.Pool {
@@ -64,6 +70,8 @@ export async function migrate() {
     create index if not exists proofs_sha256_idx on proofs (sha256);
     create index if not exists proofs_fingerprint_root_idx on proofs (fingerprint_root);
     create index if not exists proofs_creator_wallet_idx on proofs (creator_wallet);
+    create index if not exists proofs_creator_wallet_registered_idx on proofs (creator_wallet, registered_at desc);
+    create index if not exists proofs_status_registered_idx on proofs (status, registered_at desc);
     create index if not exists proofs_mint_address_idx on proofs (mint_address);
 
     create table if not exists verifications (
@@ -102,6 +110,10 @@ export async function migrate() {
     alter table proofs add column if not exists license_split jsonb;
     alter table proofs add column if not exists phash_bucket0 smallint;
     create index if not exists proofs_phash_bucket0_idx on proofs (phash_bucket0);
+    create index if not exists proofs_listed_active_registered_idx on proofs (registered_at desc)
+      where license_fee_lamports > 0 and status = 'active';
+    create index if not exists proofs_listed_active_creator_registered_idx on proofs (creator_wallet, registered_at desc)
+      where license_fee_lamports > 0 and status = 'active';
     alter table verifications add column if not exists uploaded_phash text;
   `);
 }

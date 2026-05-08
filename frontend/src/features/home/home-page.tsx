@@ -64,15 +64,6 @@ export function HomePage() {
       window.history.replaceState(null, "", window.location.pathname);
     }
     window.scrollTo({ top: 0, behavior: "auto" });
-    const idle = window.setTimeout(() => {
-      [routes.register, routes.check, routes.videoStorage, routes.market].forEach((href) => {
-        const link = document.createElement("link");
-        link.rel = "prefetch";
-        link.href = href;
-        document.head.appendChild(link);
-      });
-    }, 900);
-    return () => window.clearTimeout(idle);
   }, []);
 
   useEffect(() => {

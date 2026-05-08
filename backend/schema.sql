@@ -100,6 +100,9 @@ create table if not exists licenses (
 create index if not exists licenses_proof_id_idx on licenses (proof_id);
 create index if not exists licenses_buyer_wallet_idx on licenses (buyer_wallet);
 create index if not exists licenses_seller_wallet_idx on licenses (seller_wallet);
+create index if not exists licenses_buyer_wallet_created_idx on licenses (buyer_wallet, created_at desc);
+create index if not exists licenses_proof_id_created_idx on licenses (proof_id, created_at desc);
+create index if not exists licenses_signature_idx on licenses (solana_signature);
 
 create table if not exists disputes (
   id text primary key,

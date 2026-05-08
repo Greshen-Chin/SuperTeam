@@ -25,6 +25,14 @@ const nextConfig: NextConfig = {
   // Strip console.log in production builds, but keep console.error/warn.
   compiler: {
     removeConsole: process.env.NODE_ENV === "production" ? { exclude: ["error", "warn"] } : false
+  },
+
+  webpack: (config) => {
+    config.resolve.alias = {
+      ...config.resolve.alias,
+      "pino-pretty": false
+    };
+    return config;
   }
 };
 

@@ -37,11 +37,23 @@ export function VaultPage() {
       setProofs([]);
       return;
     }
+    const controller = new AbortController();
+    let active = true;
     setLoading(true);
-    apiClient.listProofs(publicAddress, { limit: 50 })
-      .then(({ proofs: items }) => setProofs(items))
-      .catch(() => setProofs([]))
-      .finally(() => setLoading(false));
+    apiClient.listProofs(publicAddress, { limit: 50, signal: controller.signal })
+      .then(({ proofs: items }) => {
+        if (active) setProofs(items);
+      })
+      .catch((error: unknown) => {
+        if (active && !(error instanceof DOMException && error.name === "AbortError")) setProofs([]);
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+    return () => {
+      active = false;
+      controller.abort();
+    };
   }, [publicAddress]);
 
   const visibleProofs = useMemo(() => {
@@ -278,27 +290,52 @@ function VaultSpaceCanvas() {
 }
 
 function VaultCursorEffects() {
-  const [point, setPoint] = useState({ x: 0, y: 0 });
-  const [ready, setReady] = useState(false);
-  const [bursts, setBursts] = useState<Array<{ id: number; x: number; y: number }>>([]);
-  const burstIdRef = useRef(0);
+  const auraRef = useRef<HTMLDivElement | null>(null);
+  const readyRef = useRef(false);
+  const ringRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
+    let animation = 0;
+    let targetX = 0;
+    let targetY = 0;
+
+    const draw = () => {
+      auraRef.current?.style.setProperty("transform", `translate3d(${targetX - 150}px, ${targetY - 150}px, 0)`);
+      ringRef.current?.style.setProperty("transform", `translate3d(${targetX - 17}px, ${targetY - 17}px, 0)`);
+      animation = 0;
+    };
+
+    const scheduleDraw = () => {
+      if (animation === 0) animation = window.requestAnimationFrame(draw);
+    };
+
     const move = (event: MouseEvent) => {
-      setReady(true);
-      setPoint({ x: event.clientX, y: event.clientY });
+      if (!readyRef.current) {
+        readyRef.current = true;
+        auraRef.current?.classList.add("ready");
+        ringRef.current?.classList.add("ready");
+      }
+      targetX = event.clientX;
+      targetY = event.clientY;
+      scheduleDraw();
     };
 
     const click = (event: MouseEvent) => {
-      const id = burstIdRef.current + 1;
-      burstIdRef.current = id;
-      setBursts((current) => [...current.slice(-4), { id, x: event.clientX, y: event.clientY }]);
-      window.setTimeout(() => setBursts((current) => current.filter((burst) => burst.id !== id)), 760);
+      const burst = document.createElement("div");
+      burst.className = "vault-click-burst";
+      burst.style.left = `${event.clientX}px`;
+      burst.style.top = `${event.clientY}px`;
+      for (let i = 0; i < 8; i += 1) {
+        burst.appendChild(document.createElement("span"));
+      }
+      document.body.appendChild(burst);
+      window.setTimeout(() => burst.remove(), 760);
     };
 
     window.addEventListener("mousemove", move, { passive: true });
     window.addEventListener("click", click);
     return () => {
+      if (animation !== 0) window.cancelAnimationFrame(animation);
       window.removeEventListener("mousemove", move);
       window.removeEventListener("click", click);
     };
@@ -307,18 +344,13 @@ function VaultCursorEffects() {
   return (
     <>
       <div
-        className={ready ? "vault-cursor-aura ready" : "vault-cursor-aura"}
-        style={{ transform: `translate3d(${point.x - 150}px, ${point.y - 150}px, 0)` }}
+        ref={auraRef}
+        className="vault-cursor-aura"
       />
       <div
-        className={ready ? "vault-cursor-ring ready" : "vault-cursor-ring"}
-        style={{ transform: `translate3d(${point.x - 17}px, ${point.y - 17}px, 0)` }}
+        ref={ringRef}
+        className="vault-cursor-ring"
       />
-      {bursts.map((burst) => (
-        <div className="vault-click-burst" key={burst.id} style={{ left: burst.x, top: burst.y }}>
-          <span /><span /><span /><span /><span /><span /><span /><span />
-        </div>
-      ))}
     </>
   );
 }

@@ -85,7 +85,7 @@ export const apiClient = {
 
   async listProofs(
     creatorWallet: string,
-    opts?: { cursor?: string; limit?: number }
+    opts?: { cursor?: string; limit?: number; signal?: AbortSignal }
   ): Promise<{ proofs: Proof[]; nextCursor: string | null }> {
     if (apiBaseUrl) {
       const params = new URLSearchParams({ creatorWallet });
@@ -93,7 +93,8 @@ export const apiClient = {
       if (opts?.limit) params.set("limit", String(opts.limit));
       const response = await fetch(`${apiBaseUrl}/api/proofs?${params.toString()}`, {
         cache: "no-store",
-        headers: authHeaders()
+        headers: authHeaders(),
+        signal: opts?.signal
       });
       return readApiResponse<{ proofs: Proof[]; nextCursor: string | null }>(response);
     }
@@ -102,22 +103,23 @@ export const apiClient = {
     return { proofs: [], nextCursor: null };
   },
 
-  async listForSaleProofs(opts?: { excludeWallet?: string; cursor?: string; limit?: number }): Promise<{ proofs: Proof[]; nextCursor: string | null }> {
+  async listForSaleProofs(opts?: { excludeWallet?: string; cursor?: string; limit?: number; signal?: AbortSignal }): Promise<{ proofs: Proof[]; nextCursor: string | null }> {
     if (apiBaseUrl) {
       const params = new URLSearchParams({ forSale: "true" });
       if (opts?.excludeWallet) params.set("excludeWallet", opts.excludeWallet);
       if (opts?.cursor) params.set("cursor", opts.cursor);
       if (opts?.limit) params.set("limit", String(opts.limit));
-      const response = await fetch(`${apiBaseUrl}/api/proofs?${params.toString()}`, { cache: "no-store" });
+      const response = await fetch(`${apiBaseUrl}/api/proofs?${params.toString()}`, { cache: "no-store", signal: opts?.signal });
       return readApiResponse<{ proofs: Proof[]; nextCursor: string | null }>(response);
     }
     return { proofs: [], nextCursor: null };
   },
 
-  async getProof(id: string): Promise<Proof> {
+  async getProof(id: string, opts?: { signal?: AbortSignal }): Promise<Proof> {
     if (apiBaseUrl) {
       const response = await fetch(`${apiBaseUrl}/api/proofs/${id}`, {
-        cache: "no-store"
+        cache: "no-store",
+        signal: opts?.signal
       });
 
       return readApiResponse<Proof>(response);
@@ -148,10 +150,10 @@ export const apiClient = {
     return { ...demoProof, id: proofId, licenseFeeLamports: terms.feeLamports, licenseModel: terms.licenseModel };
   },
 
-  async getLicensesByBuyer(buyerWallet: string): Promise<License[]> {
+  async getLicensesByBuyer(buyerWallet: string, opts?: { signal?: AbortSignal }): Promise<License[]> {
     if (apiBaseUrl) {
       const params = new URLSearchParams({ buyerWallet });
-      const response = await fetch(`${apiBaseUrl}/api/licenses?${params.toString()}`, { cache: "no-store" });
+      const response = await fetch(`${apiBaseUrl}/api/licenses?${params.toString()}`, { cache: "no-store", signal: opts?.signal });
       const data = await readApiResponse<{ items: License[]; nextCursor: string | null }>(response);
       return data.items;
     }

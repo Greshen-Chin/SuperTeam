@@ -6337,6 +6337,17 @@ button[class*="bg-emerald"]:hover {
   filter: drop-shadow(0 0 14px rgba(20, 241, 149, 0.32));
 }
 
+.nav-robot-logo {
+  color: #a7ffe2;
+  filter: drop-shadow(0 0 12px rgba(167, 255, 226, 0.42)) !important;
+  flex: 0 0 auto;
+}
+
+.nav-robot-logo-bg {
+  fill: rgba(5, 7, 13, 0.78);
+  stroke: rgba(167, 255, 226, 0.16);
+}
+
 .nav-center {
   background: transparent !important;
   border: 0 !important;

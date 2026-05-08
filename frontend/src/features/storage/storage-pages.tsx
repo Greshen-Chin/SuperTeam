@@ -3,7 +3,8 @@
 import Link from "next/link";
 import dynamic from "next/dynamic";
 import { useEffect, useRef, useState } from "react";
-import type { CSSProperties, DragEvent } from "react";
+import { createPortal } from "react-dom";
+import type { DragEvent } from "react";
 import type { ReactNode } from "react";
 import { ArrowRight, CheckCircle2, FileVideo, HardDrive, Layers3, LockKeyhole, Search, ShieldCheck, UploadCloud, XCircle } from "lucide-react";
 import { ConfidenceMeter } from "@/components/proof/confidence-meter";
@@ -169,11 +170,23 @@ export function NftStorageView() {
 
   useEffect(() => {
     if (!publicAddress) return;
+    const controller = new AbortController();
+    let active = true;
     setLoading(true);
-    apiClient.listProofs(publicAddress, { limit: 3 })
-      .then(({ proofs: items }) => setProofs(items))
-      .catch(() => setProofs([]))
-      .finally(() => setLoading(false));
+    apiClient.listProofs(publicAddress, { limit: 3, signal: controller.signal })
+      .then(({ proofs: items }) => {
+        if (active) setProofs(items);
+      })
+      .catch((error: unknown) => {
+        if (active && !(error instanceof DOMException && error.name === "AbortError")) setProofs([]);
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+    return () => {
+      active = false;
+      controller.abort();
+    };
   }, [publicAddress]);
 
   const displayItems = proofs.length > 0
@@ -227,9 +240,19 @@ export function VideoStorageView() {
 
   useEffect(() => {
     if (!publicAddress) return;
-    apiClient.listProofs(publicAddress, { limit: 10 })
-      .then(({ proofs: items }) => setProofs(items))
-      .catch(() => setProofs([]));
+    const controller = new AbortController();
+    let active = true;
+    apiClient.listProofs(publicAddress, { limit: 10, signal: controller.signal })
+      .then(({ proofs: items }) => {
+        if (active) setProofs(items);
+      })
+      .catch((error: unknown) => {
+        if (active && !(error instanceof DOMException && error.name === "AbortError")) setProofs([]);
+      });
+    return () => {
+      active = false;
+      controller.abort();
+    };
   }, [publicAddress]);
 
   return (
@@ -455,53 +478,91 @@ function PageParticleCanvas({ variant }: { variant: "vault" | "market" }) {
 }
 
 function StorageCursor({ variant }: { variant: "check" | "nft" | "video" }) {
-  const [point, setPoint] = useState({ x: 0, y: 0 });
-  const [ready, setReady] = useState(false);
-  const [trail, setTrail] = useState<Array<{ id: number; x: number; y: number }>>([]);
-  const [clicks, setClicks] = useState<Array<{ id: number; x: number; y: number }>>([]);
-  const idRef = useRef(0);
-  const trailIdRef = useRef(0);
+  const [mounted, setMounted] = useState(false);
+  const cursorRef = useRef<HTMLDivElement | null>(null);
+  const washRef = useRef<HTMLDivElement | null>(null);
+  const coreRef = useRef<HTMLDivElement | null>(null);
+  const readyRef = useRef(false);
 
   useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    let animation = 0;
+    let lastTrail = 0;
+    let targetX = 0;
+    let targetY = 0;
+
+    const draw = () => {
+      cursorRef.current?.style.setProperty("transform", `translate3d(${targetX - 22}px, ${targetY - 22}px, 0)`);
+      washRef.current?.style.setProperty("transform", `translate3d(${targetX - 180}px, ${targetY - 180}px, 0)`);
+      coreRef.current?.style.setProperty("transform", `translate3d(${targetX - 5}px, ${targetY - 5}px, 0)`);
+      animation = 0;
+    };
+
+    const scheduleDraw = () => {
+      if (animation === 0) animation = window.requestAnimationFrame(draw);
+    };
+
+    const addTrail = (x: number, y: number) => {
+      const now = performance.now();
+      if (now - lastTrail < 36) return;
+      lastTrail = now;
+      const trail = document.createElement("span");
+      trail.className = `storage-trail storage-trail-${variant}`;
+      trail.style.left = `${x}px`;
+      trail.style.top = `${y}px`;
+      trail.style.opacity = "0.8";
+      document.body.appendChild(trail);
+      window.setTimeout(() => trail.remove(), 720);
+    };
+
     const move = (event: MouseEvent) => {
-      setReady(true);
-      setPoint({ x: event.clientX, y: event.clientY });
-      const id = trailIdRef.current + 1;
-      trailIdRef.current = id;
-      setTrail((current) => [...current.slice(-14), { id, x: event.clientX, y: event.clientY }]);
-      window.setTimeout(() => {
-        setTrail((current) => current.filter((item) => item.id !== id));
-      }, 720);
+      if (!readyRef.current) {
+        readyRef.current = true;
+        cursorRef.current?.classList.add("ready");
+        washRef.current?.classList.add("ready");
+        coreRef.current?.classList.add("ready");
+      }
+      targetX = event.clientX;
+      targetY = event.clientY;
+      scheduleDraw();
+      addTrail(event.clientX, event.clientY);
     };
+
     const click = (event: MouseEvent) => {
-      const id = idRef.current + 1;
-      idRef.current = id;
-      setClicks((current) => [...current.slice(-5), { id, x: event.clientX, y: event.clientY }]);
-      window.setTimeout(() => {
-        setClicks((current) => current.filter((item) => item.id !== id));
-      }, 900);
+      const clickBurst = document.createElement("div");
+      clickBurst.className = `storage-click storage-click-${variant}`;
+      clickBurst.style.left = `${event.clientX}px`;
+      clickBurst.style.top = `${event.clientY}px`;
+      const burstCount = variant === "video" ? 6 : 10;
+      for (let i = 0; i < burstCount; i += 1) {
+        const spark = document.createElement("span");
+        spark.style.setProperty("--burst-angle", `${i * (variant === "video" ? 60 : 36)}deg`);
+        clickBurst.appendChild(spark);
+      }
+      document.body.appendChild(clickBurst);
+      window.setTimeout(() => clickBurst.remove(), 900);
     };
+
     window.addEventListener("mousemove", move, { passive: true });
     window.addEventListener("click", click);
     return () => {
+      if (animation !== 0) window.cancelAnimationFrame(animation);
       window.removeEventListener("mousemove", move);
       window.removeEventListener("click", click);
     };
-  }, []);
+  }, [variant]);
 
-  return (
+  if (!mounted) return null;
+
+  return createPortal(
     <>
-      <div className={ready ? `storage-cursor storage-cursor-${variant} ready` : `storage-cursor storage-cursor-${variant}`} style={{ transform: `translate3d(${point.x - 22}px, ${point.y - 22}px, 0)` }} />
-      <div className={ready ? `storage-cursor-wash storage-cursor-wash-${variant} ready` : `storage-cursor-wash storage-cursor-wash-${variant}`} style={{ transform: `translate3d(${point.x - 180}px, ${point.y - 180}px, 0)` }} />
-      <div className={ready ? `storage-cursor-core storage-cursor-core-${variant} ready` : `storage-cursor-core storage-cursor-core-${variant}`} style={{ transform: `translate3d(${point.x - 5}px, ${point.y - 5}px, 0)` }} />
-      {trail.map((item, index) => (
-        <span className={`storage-trail storage-trail-${variant}`} key={item.id} style={{ left: item.x, opacity: (index + 1) / 16, top: item.y }} />
-      ))}
-      {clicks.map((click) => (
-        <div className={`storage-click storage-click-${variant}`} key={click.id} style={{ left: click.x, top: click.y }}>
-          {Array.from({ length: variant === "video" ? 6 : 10 }, (_, index) => <span key={index} style={{ "--burst-angle": `${index * (variant === "video" ? 60 : 36)}deg` } as CSSProperties} />)}
-        </div>
-      ))}
-    </>
+      <div ref={cursorRef} className={`storage-cursor storage-cursor-${variant}`} />
+      <div ref={washRef} className={`storage-cursor-wash storage-cursor-wash-${variant}`} />
+      <div ref={coreRef} className={`storage-cursor-core storage-cursor-core-${variant}`} />
+    </>,
+    document.body
   );
 }
