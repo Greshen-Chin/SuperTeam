@@ -10,6 +10,7 @@ export type RegisterProofInput = {
   fingerprint: Fingerprint;
   solanaSignature: string;
   ipfsVideoUri?: string;
+  ipfsThumbnailUri?: string;
 };
 
 type ApiResponse<T> = {

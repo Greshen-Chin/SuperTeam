@@ -21,3 +21,13 @@ export function formatDateTime(value: string | Date) {
   }).format(new Date(value));
 }
 
+export function ipfsToHttp(uri: string | null | undefined): string | null {
+  if (!uri) return null;
+  if (uri.startsWith("ipfs://")) {
+    const cid = uri.slice(7);
+    return `https://ipfs.io/ipfs/${cid}`;
+  }
+  if (uri.startsWith("http")) return uri;
+  return null;
+}
+

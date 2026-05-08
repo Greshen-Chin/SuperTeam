@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { registerProofOnChain } from "@/lib/blockchain-adapter";
 import { apiClient } from "@/lib/api-client";
+import { extractThumbnail } from "@/lib/extract-thumbnail";
 import { useAuth } from "@/context/AuthContext";
 import type { Fingerprint, Proof } from "@/shared/schemas";
 
@@ -61,11 +62,19 @@ export function useRegisterVideoFlow() {
 
       setState("uploading");
       let ipfsVideoUri: string | undefined;
+      let ipfsThumbnailUri: string | undefined;
       try {
-        const upload = await apiClient.uploadFile(file);
-        ipfsVideoUri = upload.ipfsUrl;
+        const [videoUpload, thumbnailFile] = await Promise.all([
+          apiClient.uploadFile(file),
+          extractThumbnail(file).catch(() => null)
+        ]);
+        ipfsVideoUri = videoUpload.ipfsUrl;
+        if (thumbnailFile) {
+          const thumbUpload = await apiClient.uploadFile(thumbnailFile).catch(() => null);
+          if (thumbUpload) ipfsThumbnailUri = thumbUpload.ipfsUrl;
+        }
       } catch {
-        // Non-fatal — proceed without IPFS URI
+        // Non-fatal — proceed without IPFS URIs
       }
 
       setState("waiting_for_signature");
@@ -85,7 +94,8 @@ export function useRegisterVideoFlow() {
         creatorWallet: publicAddress,
         fingerprint: nextFingerprint,
         solanaSignature: onChainResult.signature,
-        ipfsVideoUri
+        ipfsVideoUri,
+        ipfsThumbnailUri
       });
 
       setProof(nextProof);
