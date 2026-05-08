@@ -26,7 +26,7 @@ export function AuthModal({ open, onClose }: AuthModalProps) {
   useEffect(() => {
     if (isLoggedIn && open) {
       onClose();
-      router.push(routes.dashboard);
+      router.push(routes.register);
     }
   }, [isLoggedIn, open, onClose, router]);
 

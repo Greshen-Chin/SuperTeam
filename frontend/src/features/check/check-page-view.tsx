@@ -2,7 +2,6 @@
 
 import dynamic from "next/dynamic";
 import Link from "next/link";
-import { useEffect, useRef, useState } from "react";
 import type { CSSProperties } from "react";
 import {
   AlertCircle,
@@ -15,14 +14,15 @@ import {
   UploadCloud,
   Zap,
 } from "lucide-react";
+import { PageCursorEffects } from "@/components/ui/page-cursor-effects";
+import { VideoDropzone } from "@/components/upload/video-dropzone";
+import { useVerifyVideoFlow } from "@/features/verify/use-verify-video-flow";
+import type { MatchType } from "@/shared/schemas";
 
 const SparklesCore = dynamic(
   () => import("@/components/ui/sparkles").then((mod) => mod.SparklesCore),
   { ssr: false }
 );
-import { VideoDropzone } from "@/components/upload/video-dropzone";
-import { useVerifyVideoFlow } from "@/features/verify/use-verify-video-flow";
-import type { MatchType } from "@/shared/schemas";
 
 type StepState = "idle" | "active" | "done" | "error";
 
@@ -51,6 +51,10 @@ const MATCH_CFG: Record<MatchType, { label: string; color: string; glow: string;
   none:     { label: "No Registered Origin",  color: "#FF6B6B", glow: "rgba(255,107,107,0.15)", icon: <ShieldAlert  size={18} />, tone: "red"   },
 };
 
+function createResultStyle(color: string, glow: string): CSSProperties & Record<"--r-color" | "--r-glow", string> {
+  return { "--r-color": color, "--r-glow": glow };
+}
+
 export function CheckPageView() {
   const flow = useVerifyVideoFlow();
   const isBusy    = flow.state === "fingerprinting" || flow.state === "checking";
@@ -61,7 +65,7 @@ export function CheckPageView() {
 
   return (
     <main className="check-page storage-check">
-      <CheckCursor />
+      <PageCursorEffects variant="check" />
 
       {/* Ambient rails */}
       <div className="storage-wallpaper-rails" aria-hidden>
@@ -208,7 +212,7 @@ export function CheckPageView() {
           {hasResult && flow.result && matchCfg ? (
             <div
               className={`check-result-found check-result-${matchCfg.tone}`}
-              style={{ "--r-color": matchCfg.color, "--r-glow": matchCfg.glow } as CSSProperties}
+              style={createResultStyle(matchCfg.color, matchCfg.glow)}
             >
               <div className="check-result-badge">
                 {matchCfg.icon}
@@ -252,42 +256,3 @@ export function CheckPageView() {
   );
 }
 
-/* ─── Custom cursor ─── */
-function CheckCursor() {
-  const [pos, setPos] = useState({ x: 0, y: 0 });
-  const [ready, setReady] = useState(false);
-  const [trail, setTrail] = useState<Array<{ id: number; x: number; y: number }>>([]);
-  const trailId = useRef(0);
-
-  useEffect(() => {
-    const onMove = (e: MouseEvent) => {
-      setReady(true);
-      setPos({ x: e.clientX, y: e.clientY });
-      const id = ++trailId.current;
-      setTrail((t) => [...t.slice(-12), { id, x: e.clientX, y: e.clientY }]);
-      setTimeout(() => setTrail((t) => t.filter((p) => p.id !== id)), 600);
-    };
-    window.addEventListener("mousemove", onMove, { passive: true });
-    return () => window.removeEventListener("mousemove", onMove);
-  }, []);
-
-  return (
-    <>
-      <div
-        className={ready ? "check-cursor ready" : "check-cursor"}
-        style={{ transform: `translate3d(${pos.x - 20}px,${pos.y - 20}px,0)` }}
-      />
-      <div
-        className={ready ? "check-cursor-wash ready" : "check-cursor-wash"}
-        style={{ transform: `translate3d(${pos.x - 160}px,${pos.y - 160}px,0)` }}
-      />
-      {trail.map((p, i) => (
-        <span
-          className="check-trail"
-          key={p.id}
-          style={{ left: p.x, top: p.y, opacity: (i + 1) / 14 } as CSSProperties}
-        />
-      ))}
-    </>
-  );
-}

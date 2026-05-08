@@ -43,6 +43,7 @@ export function AppShell({ children }: AppShellProps) {
   const [authOpen, setAuthOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
   const { profile, hasName } = useCreatorProfile();
+  const launchHref = routes.register;
 
   return (
     <div className="min-h-screen bg-[var(--bg)] text-white">
@@ -76,7 +77,7 @@ export function AppShell({ children }: AppShellProps) {
         <div className="nav-right">
           {isHome ? (
             isLoggedIn ? (
-              <Link className="home-nav-launch" href={routes.dashboard}>
+              <Link className="home-nav-launch" href={launchHref} prefetch>
                 Launch app
               </Link>
             ) : (
