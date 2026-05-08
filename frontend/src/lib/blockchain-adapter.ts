@@ -67,11 +67,25 @@ export async function registerProofOnChain(
     return { signature, explorerUrl: explorerUrl(signature) };
   }
 
-  const response = await fetch(`${getApiBaseUrl()}/api/anchor-proof`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(input)
-  });
+  const controller = new AbortController();
+  const timeout = window.setTimeout(() => controller.abort(), 45_000);
+
+  let response: Response;
+  try {
+    response = await fetch(`${getApiBaseUrl()}/api/anchor-proof`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(input),
+      signal: controller.signal
+    });
+  } catch (error) {
+    if (error instanceof DOMException && error.name === "AbortError") {
+      throw new Error("Solana anchoring timed out. Please try again.");
+    }
+    throw error;
+  } finally {
+    window.clearTimeout(timeout);
+  }
 
   const text = await response.text();
   let payload: {

@@ -41,7 +41,10 @@ export type AnchorProofResult = {
 
 export async function anchorProofOnChain(input: AnchorProofInput): Promise<AnchorProofResult> {
   const platform = loadPlatformKeypair();
-  const connection = new Connection(config.solanaRpcUrl, "confirmed");
+  const connection = new Connection(config.solanaRpcUrl, {
+    commitment: "confirmed",
+    confirmTransactionInitialTimeout: 35_000
+  });
 
   const memoPayload = JSON.stringify({
     v: 1,
@@ -71,10 +74,19 @@ export async function anchorProofOnChain(input: AnchorProofInput): Promise<Ancho
     preflightCommitment: "confirmed"
   });
 
-  await connection.confirmTransaction(
-    { signature, blockhash, lastValidBlockHeight },
-    "confirmed"
-  );
+  const confirmation = await Promise.race([
+    connection.confirmTransaction(
+      { signature, blockhash, lastValidBlockHeight },
+      "confirmed"
+    ),
+    new Promise<never>((_, reject) => {
+      setTimeout(() => reject(new Error("Solana confirmation timed out.")), 35_000);
+    })
+  ]);
+
+  if (confirmation.value.err) {
+    throw new Error(`Solana transaction failed: ${JSON.stringify(confirmation.value.err)}`);
+  }
 
   const cluster = config.solanaCluster;
   const explorerSuffix = cluster === "mainnet-beta" ? "" : `?cluster=${cluster}`;
