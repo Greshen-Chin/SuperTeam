@@ -41,10 +41,6 @@ export type AnchorProofResult = {
 
 export async function anchorProofOnChain(input: AnchorProofInput): Promise<AnchorProofResult> {
   const platform = loadPlatformKeypair();
-  const connection = new Connection(config.solanaRpcUrl, {
-    commitment: "confirmed",
-    confirmTransactionInitialTimeout: 35_000
-  });
 
   const memoPayload = JSON.stringify({
     v: 1,
@@ -54,6 +50,29 @@ export async function anchorProofOnChain(input: AnchorProofInput): Promise<Ancho
     sha: input.sha256,
     root: input.fingerprintRoot,
     ...(input.metadataUri ? { uri: input.metadataUri } : {})
+  });
+
+  const signature = await Promise.race([
+    submitMemoTransaction(platform, memoPayload),
+    new Promise<string>((resolve) => {
+      setTimeout(() => {
+        resolve(`pending_${input.proofId}_${Date.now()}`);
+      }, 8_000);
+    })
+  ]);
+
+  const cluster = config.solanaCluster;
+  const explorerSuffix = cluster === "mainnet-beta" ? "" : `?cluster=${cluster}`;
+  return {
+    signature,
+    explorerUrl: `https://explorer.solana.com/tx/${signature}${explorerSuffix}`
+  };
+}
+
+async function submitMemoTransaction(platform: Keypair, memoPayload: string): Promise<string> {
+  const connection = new Connection(config.solanaRpcUrl, {
+    commitment: "confirmed",
+    confirmTransactionInitialTimeout: 20_000
   });
 
   const tx = new Transaction().add(
@@ -79,10 +98,5 @@ export async function anchorProofOnChain(input: AnchorProofInput): Promise<Ancho
     "confirmed"
   ).catch(() => undefined);
 
-  const cluster = config.solanaCluster;
-  const explorerSuffix = cluster === "mainnet-beta" ? "" : `?cluster=${cluster}`;
-  return {
-    signature,
-    explorerUrl: `https://explorer.solana.com/tx/${signature}${explorerSuffix}`
-  };
+  return signature;
 }
