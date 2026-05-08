@@ -19,6 +19,19 @@ function explorerUrl(signature: string): string {
   return `https://explorer.solana.com/tx/${signature}${suffix}`;
 }
 
+function getApiBaseUrl(): string {
+  const configured = env.NEXT_PUBLIC_API_BASE_URL;
+  if (
+    typeof window !== "undefined" &&
+    /^(http:\/\/)?(localhost|127\.0\.0\.1)(:\d+)?/i.test(configured) &&
+    !["localhost", "127.0.0.1"].includes(window.location.hostname)
+  ) {
+    return window.location.origin;
+  }
+
+  return configured;
+}
+
 export type PayForLicenseInput = {
   proofId: string;
   buyerWallet: string;
@@ -54,7 +67,7 @@ export async function registerProofOnChain(
     return { signature, explorerUrl: explorerUrl(signature) };
   }
 
-  const response = await fetch(`${env.NEXT_PUBLIC_API_BASE_URL}/api/anchor-proof`, {
+  const response = await fetch(`${getApiBaseUrl()}/api/anchor-proof`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(input)
