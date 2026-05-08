@@ -7,7 +7,7 @@ import { ProfileModal } from "@/features/profile/profile-modal";
 import { useCreatorProfile } from "@/lib/use-creator-profile";
 import type { ReactNode } from "react";
 import { usePathname } from "next/navigation";
-import { Archive, BadgeCheck, Search, Tag, UploadCloud, Wallet } from "lucide-react";
+import { Archive, Search, Tag, UploadCloud, Wallet } from "lucide-react";
 import { routes } from "@/lib/routes";
 import { cn, formatWallet } from "@/lib/utils";
 import { useAuth } from "@/context/AuthContext";
@@ -24,7 +24,6 @@ type AppShellProps = {
 const navItems = [
   { href: routes.register, label: "Upload", icon: UploadCloud },
   { href: routes.check, label: "Check", icon: Search },
-  { href: routes.nftStorage, label: "Proofs", icon: BadgeCheck },
   { href: routes.videoStorage, label: "Vault", icon: Archive },
   { href: routes.market, label: "Market", icon: Tag }
 ];

@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import {
-  Check, ExternalLink, Loader2, Pencil, ShieldCheck, Store, Tag, X
+  Check, ExternalLink, Loader2, Pencil, Search, ShieldCheck, SlidersHorizontal, Store, Tag, X
 } from "lucide-react";
 import { apiClient } from "@/lib/api-client";
 import { payForLicense } from "@/lib/blockchain-adapter";
@@ -40,6 +40,9 @@ export function MarketView() {
   const [browseLoading, setBrowseLoading] = useState(false);
   const [editingProof, setEditingProof] = useState<Proof | null>(null);
   const [buyingProof, setBuyingProof] = useState<Proof | null>(null);
+  const [query, setQuery] = useState("");
+  const [marketFilter, setMarketFilter] = useState<"all" | "for_sale" | "mine">("all");
+  const [marketSort, setMarketSort] = useState<"newest" | "price" | "name">("newest");
 
   // Load own proofs + purchased licenses
   useEffect(() => {
@@ -85,6 +88,24 @@ export function MarketView() {
 
   const listedProofs = proofs.filter((p) => p.licenseFeeLamports > 0);
   const unlistedProofs = proofs.filter((p) => p.licenseFeeLamports === 0);
+  const normalizedQuery = query.trim().toLowerCase();
+  const sortProofs = (items: Proof[]) => [...items].sort((a, b) => {
+    if (marketSort === "price") return b.licenseFeeLamports - a.licenseFeeLamports;
+    if (marketSort === "name") return a.title.localeCompare(b.title);
+    return new Date(b.registeredAt).getTime() - new Date(a.registeredAt).getTime();
+  });
+  const visibleListings = sortProofs(listed.filter((proof) => {
+    if (marketFilter === "mine") return false;
+    return !normalizedQuery ||
+      proof.title.toLowerCase().includes(normalizedQuery) ||
+      (proof.creatorHandle ?? proof.creatorWallet).toLowerCase().includes(normalizedQuery);
+  }));
+  const visibleOwnProofs = sortProofs([...listedProofs, ...unlistedProofs].filter((proof) => {
+    if (marketFilter === "for_sale" && proof.licenseFeeLamports === 0) return false;
+    return !normalizedQuery ||
+      proof.title.toLowerCase().includes(normalizedQuery) ||
+      proof.id.toLowerCase().includes(normalizedQuery);
+  }));
 
   if (authLoading) {
     return (
@@ -111,6 +132,21 @@ export function MarketView() {
 
   return (
     <div className="market-page">
+      <MarketParticleCanvas />
+      <div className="market-energy-orbs" aria-hidden>
+        <span className="market-energy-orb market-energy-orb-1" />
+        <span className="market-energy-orb market-energy-orb-2" />
+        <span className="market-energy-orb market-energy-orb-3" />
+        <span className="market-energy-orb market-energy-orb-4" />
+        <span className="market-energy-orb market-energy-orb-5" />
+      </div>
+      <div className="market-light-beams" aria-hidden />
+      <div className="market-hero-orbit" aria-hidden>
+        <span className="market-hero-ring market-ring-1" />
+        <span className="market-hero-ring market-ring-2" />
+        <span className="market-hero-ring market-ring-3" />
+        <span className="market-hero-tag"><Tag size={34} /></span>
+      </div>
       {/* Header */}
       <div className="market-hero">
         <div>
@@ -139,12 +175,32 @@ export function MarketView() {
         </div>
       </div>
 
+      <section className="market-control-bar" aria-label="Marketplace controls">
+        <label className="market-search-field">
+          <Search size={16} />
+          <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search creators, titles, proof IDs" />
+        </label>
+        <div className="market-filter-group">
+          <SlidersHorizontal size={15} />
+          <select value={marketFilter} onChange={(event) => setMarketFilter(event.target.value as "all" | "for_sale" | "mine")}>
+            <option value="all">All Listings</option>
+            <option value="for_sale">For Sale</option>
+            <option value="mine">My Vault</option>
+          </select>
+          <select value={marketSort} onChange={(event) => setMarketSort(event.target.value as "newest" | "price" | "name")}>
+            <option value="newest">Newest</option>
+            <option value="price">Price</option>
+            <option value="name">Name</option>
+          </select>
+        </div>
+      </section>
+
       {/* Browse Marketplace */}
-      <section className="market-section">
+      {marketFilter !== "mine" ? <section className="market-section">
         <div className="market-section-header">
           <Store size={15} />
           <h2>Browse Marketplace</h2>
-          <span className="market-section-count">{browseLoading ? "…" : `${listed.length} listings`}</span>
+          <span className="market-section-count">{browseLoading ? "..." : `${visibleListings.length} listings`}</span>
         </div>
 
         {browseLoading ? (
@@ -152,14 +208,14 @@ export function MarketView() {
             <Loader2 size={18} className="market-spinner" />
             <span>Loading listings…</span>
           </div>
-        ) : listed.length === 0 ? (
+        ) : visibleListings.length === 0 ? (
           <div className="market-empty">
             <p>No videos listed for sale yet.</p>
             <p className="market-empty-hint">Be the first — upload a video and set a license price.</p>
           </div>
         ) : (
           <div className="market-grid">
-            {listed.map((proof) => (
+            {visibleListings.map((proof) => (
               <BrowseCard
                 key={proof.id}
                 proof={proof}
@@ -168,7 +224,7 @@ export function MarketView() {
             ))}
           </div>
         )}
-      </section>
+      </section> : null}
 
       {loading ? (
         <div className="market-loading">
@@ -192,14 +248,7 @@ export function MarketView() {
               </div>
             ) : (
               <div className="market-grid">
-                {listedProofs.map((proof) => (
-                  <ListingCard
-                    key={proof.id}
-                    proof={proof}
-                    onEdit={() => setEditingProof(proof)}
-                  />
-                ))}
-                {unlistedProofs.map((proof) => (
+                {visibleOwnProofs.map((proof) => (
                   <ListingCard
                     key={proof.id}
                     proof={proof}
@@ -268,6 +317,10 @@ function BrowseCard({ proof, onBuy }: { proof: Proof; onBuy: () => void }) {
           <ExternalLink size={12} />
         </Link>
       </div>
+      <div className="market-card-thumb">
+        <Store size={30} />
+        <span>LICENSE</span>
+      </div>
 
       <p className="market-listing-title">{proof.title}</p>
       <p className="market-listing-date">
@@ -288,6 +341,86 @@ function BrowseCard({ proof, onBuy }: { proof: Proof; onBuy: () => void }) {
 }
 
 // ── Buy license panel ─────────────────────────────────────────────────────────
+
+function MarketParticleCanvas() {
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const context = canvas.getContext("2d");
+    if (!context) return;
+
+    const colors = ["255,179,71", "255,153,69", "252,211,77", "255,107,107"];
+    const mouse = { x: -9999, y: -9999 };
+    let width = 0;
+    let height = 0;
+    let animation = 0;
+    const particles = Array.from({ length: 62 }, () => {
+      const color = colors[Math.floor(Math.random() * colors.length)] ?? colors[0];
+      return {
+        x: Math.random(),
+        y: Math.random(),
+        vx: (Math.random() - 0.5) * 0.22,
+        vy: (Math.random() - 0.5) * 0.22,
+        color,
+        opacity: 0.08 + Math.random() * 0.18,
+        size: 0.6 + Math.random() * 1.8
+      };
+    });
+
+    const resize = () => {
+      const ratio = Math.min(window.devicePixelRatio || 1, 1.5);
+      width = canvas.offsetWidth || window.innerWidth;
+      height = canvas.offsetHeight || window.innerHeight;
+      canvas.width = Math.floor(width * ratio);
+      canvas.height = Math.floor(height * ratio);
+      context.setTransform(ratio, 0, 0, ratio, 0, 0);
+    };
+    const move = (event: MouseEvent) => { mouse.x = event.clientX; mouse.y = event.clientY; };
+    const leave = () => { mouse.x = -9999; mouse.y = -9999; };
+    const draw = () => {
+      context.clearRect(0, 0, width, height);
+      particles.forEach((particle) => {
+        const px = particle.x * width;
+        const py = particle.y * height;
+        const dx = px - mouse.x;
+        const dy = py - mouse.y;
+        const distance = Math.hypot(dx, dy) || 1;
+        if (distance < 120) {
+          const force = ((120 - distance) / 120) * 0.42;
+          particle.vx += (dx / distance) * force;
+          particle.vy += (dy / distance) * force;
+        }
+        particle.vx += (0.5 - particle.x) * 0.0001 * width;
+        particle.vy += (0.5 - particle.y) * 0.0001 * height;
+        particle.vx *= 0.965;
+        particle.vy *= 0.965;
+        particle.x = Math.min(1, Math.max(0, particle.x + particle.vx / width));
+        particle.y = Math.min(1, Math.max(0, particle.y + particle.vy / height));
+        context.beginPath();
+        context.fillStyle = `rgba(${particle.color},${particle.opacity})`;
+        context.arc(particle.x * width, particle.y * height, particle.size, 0, Math.PI * 2);
+        context.fill();
+      });
+      animation = window.requestAnimationFrame(draw);
+    };
+
+    resize();
+    draw();
+    window.addEventListener("resize", resize);
+    window.addEventListener("mousemove", move, { passive: true });
+    window.addEventListener("mouseleave", leave);
+    return () => {
+      window.cancelAnimationFrame(animation);
+      window.removeEventListener("resize", resize);
+      window.removeEventListener("mousemove", move);
+      window.removeEventListener("mouseleave", leave);
+    };
+  }, []);
+
+  return <canvas className="market-particle-canvas page-energy-canvas" ref={canvasRef} aria-hidden />;
+}
 
 type BuyStep = "confirm" | "paying" | "done" | "error";
 
@@ -451,6 +584,10 @@ function ListingCard({ proof, onEdit }: { proof: Proof; onEdit: () => void }) {
         <Link className="market-listing-cert" href={routes.certificate(proof.id)} title="View certificate">
           <ExternalLink size={12} />
         </Link>
+      </div>
+      <div className="market-card-thumb">
+        <ShieldCheck size={30} />
+        <span>{isListed ? "LISTED" : "VAULT"}</span>
       </div>
 
       <p className="market-listing-title">{proof.title}</p>

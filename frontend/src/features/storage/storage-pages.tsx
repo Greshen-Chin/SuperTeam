@@ -326,6 +326,19 @@ function StorageShell({
   return (
     <main className={`storage-page-shell storage-${variant}`}>
       <StorageCursor variant={variant} />
+      {variant === "video" ? (
+        <>
+          <PageParticleCanvas variant="vault" />
+          <div className="vault-energy-orbs" aria-hidden>
+            <span className="vault-energy-orb vault-energy-orb-1" />
+            <span className="vault-energy-orb vault-energy-orb-2" />
+            <span className="vault-energy-orb vault-energy-orb-3" />
+            <span className="vault-energy-orb vault-energy-orb-4" />
+            <span className="vault-energy-orb vault-energy-orb-5" />
+          </div>
+          <div className="vault-light-beams" aria-hidden />
+        </>
+      ) : null}
       <div className="storage-wallpaper-rails" aria-hidden>
         <span />
         <span />
@@ -356,6 +369,89 @@ function StorageShell({
       </section>
     </main>
   );
+}
+
+function PageParticleCanvas({ variant }: { variant: "vault" | "market" }) {
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const context = canvas.getContext("2d");
+    if (!context) return;
+
+    const colors = variant === "vault"
+      ? ["20,241,149", "0,229,204", "134,239,172", "78,155,255"]
+      : ["255,179,71", "255,153,69", "252,211,77", "255,107,107"];
+    const mouse = { x: -9999, y: -9999 };
+    let width = 0;
+    let height = 0;
+    let animation = 0;
+
+    const particles = Array.from({ length: 62 }, () => {
+      const color = colors[Math.floor(Math.random() * colors.length)] ?? colors[0];
+      return {
+        x: Math.random(),
+        y: Math.random(),
+        vx: (Math.random() - 0.5) * 0.22,
+        vy: (Math.random() - 0.5) * 0.22,
+        color,
+        opacity: 0.08 + Math.random() * 0.18,
+        size: 0.6 + Math.random() * 1.8
+      };
+    });
+
+    const resize = () => {
+      const ratio = Math.min(window.devicePixelRatio || 1, 1.5);
+      width = canvas.offsetWidth || window.innerWidth;
+      height = canvas.offsetHeight || window.innerHeight;
+      canvas.width = Math.floor(width * ratio);
+      canvas.height = Math.floor(height * ratio);
+      context.setTransform(ratio, 0, 0, ratio, 0, 0);
+    };
+    const move = (event: MouseEvent) => { mouse.x = event.clientX; mouse.y = event.clientY; };
+    const leave = () => { mouse.x = -9999; mouse.y = -9999; };
+    const draw = () => {
+      context.clearRect(0, 0, width, height);
+      particles.forEach((particle) => {
+        const px = particle.x * width;
+        const py = particle.y * height;
+        const dx = px - mouse.x;
+        const dy = py - mouse.y;
+        const distance = Math.hypot(dx, dy) || 1;
+        if (distance < 120) {
+          const force = ((120 - distance) / 120) * 0.42;
+          particle.vx += (dx / distance) * force;
+          particle.vy += (dy / distance) * force;
+        }
+        particle.vx += (0.5 - particle.x) * 0.0001 * width;
+        particle.vy += (0.5 - particle.y) * 0.0001 * height;
+        particle.vx *= 0.965;
+        particle.vy *= 0.965;
+        particle.x = Math.min(1, Math.max(0, particle.x + particle.vx / width));
+        particle.y = Math.min(1, Math.max(0, particle.y + particle.vy / height));
+        context.beginPath();
+        context.fillStyle = `rgba(${particle.color},${particle.opacity})`;
+        context.arc(particle.x * width, particle.y * height, particle.size, 0, Math.PI * 2);
+        context.fill();
+      });
+      animation = window.requestAnimationFrame(draw);
+    };
+
+    resize();
+    draw();
+    window.addEventListener("resize", resize);
+    window.addEventListener("mousemove", move, { passive: true });
+    window.addEventListener("mouseleave", leave);
+    return () => {
+      window.cancelAnimationFrame(animation);
+      window.removeEventListener("resize", resize);
+      window.removeEventListener("mousemove", move);
+      window.removeEventListener("mouseleave", leave);
+    };
+  }, [variant]);
+
+  return <canvas className={`${variant}-particle-canvas page-energy-canvas`} ref={canvasRef} aria-hidden />;
 }
 
 function StorageCursor({ variant }: { variant: "check" | "nft" | "video" }) {
