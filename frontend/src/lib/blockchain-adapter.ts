@@ -73,11 +73,18 @@ export async function registerProofOnChain(
     body: JSON.stringify(input)
   });
 
-  const payload = (await response.json()) as {
+  const text = await response.text();
+  let payload: {
     success: boolean;
     data: RegisterProofOnChainResult | null;
     error: { code: string; message: string } | null;
   };
+
+  try {
+    payload = JSON.parse(text) as typeof payload;
+  } catch {
+    throw new Error(text || `Failed to anchor proof on Solana (${response.status}).`);
+  }
 
   if (!response.ok || !payload.success || !payload.data) {
     throw new Error(payload.error?.message ?? "Failed to anchor proof on Solana.");

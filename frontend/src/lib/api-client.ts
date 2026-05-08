@@ -36,7 +36,14 @@ function getApiBaseUrl(): string | undefined {
 }
 
 async function readApiResponse<T>(response: Response): Promise<T> {
-  const payload = (await response.json()) as ApiResponse<T>;
+  const text = await response.text();
+  let payload: ApiResponse<T>;
+
+  try {
+    payload = JSON.parse(text) as ApiResponse<T>;
+  } catch {
+    throw new Error(text || `VidChain API request failed with status ${response.status}.`);
+  }
 
   if (!response.ok || !payload.success || !payload.data) {
     throw new Error(payload.error?.message ?? "VidChain API request failed.");
