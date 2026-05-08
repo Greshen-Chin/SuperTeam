@@ -1,4 +1,4 @@
-import { buildApp } from "./app.js";
+import { buildApp } from "./build-app.js";
 import { config } from "./config.js";
 import { migrate, requirePool } from "./db.js";
 import { createDisputeRepository } from "./repositories/dispute-repository.js";

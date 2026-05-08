@@ -6,7 +6,7 @@
       "framework": "nextjs"
     },
     "backend": {
-      "entrypoint": "backend/src/server.ts",
+      "entrypoint": "backend/src/app.ts",
       "routePrefix": "/api",
       "framework": "fastify",
       "memory": 1024,

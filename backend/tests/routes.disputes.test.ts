@@ -54,7 +54,7 @@ vi.mock("../src/repositories/auth-repository.js", () => ({
   normalizeAddress: (a: string) => a
 }));
 
-import { buildApp } from "../src/app.js";
+import { buildApp } from "../src/build-app.js";
 
 const deadline = new Date(Date.now() + 72 * 60 * 60 * 1000).toISOString();
 
