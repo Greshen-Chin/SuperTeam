@@ -12,6 +12,7 @@ import {
   FileVideo,
   Fingerprint,
   RotateCcw,
+  SearchCheck,
   ShieldCheck
 } from "lucide-react";
 import { routes } from "@/lib/routes";
@@ -134,6 +135,9 @@ export function RegisterView() {
               onChangeFile={() => { flow.reset(); inputRef.current?.click(); }}
               canCreate={flow.canCreateProof}
               error={flow.error}
+              checkingRegistry={flow.checkingRegistry}
+              registryCheck={flow.registryCheck}
+              onCheckRegistry={() => void flow.checkRegistry()}
             />
           ) : null}
 
@@ -209,7 +213,10 @@ function FileSelectedState({
   onCreateProof,
   onChangeFile,
   canCreate,
-  error
+  error,
+  checkingRegistry,
+  registryCheck,
+  onCheckRegistry
 }: {
   file: File | null;
   filename: string;
@@ -220,6 +227,9 @@ function FileSelectedState({
   onChangeFile: () => void;
   canCreate: boolean;
   error: string | null;
+  checkingRegistry: boolean;
+  registryCheck: ReturnType<typeof useRegisterVideoFlow>["registryCheck"];
+  onCheckRegistry: () => void;
 }) {
   return (
     <div className="upload-idle-state">
@@ -255,6 +265,31 @@ function FileSelectedState({
         onChange={(e) => onTitleChange(e.target.value)}
         onKeyDown={(e) => { if (e.key === "Enter" && canCreate) onCreateProof(); }}
       />
+
+      <button
+        className="protect-another-btn"
+        style={{ marginTop: "0.8rem", padding: "0.5rem 0.9rem" }}
+        type="button"
+        onClick={onCheckRegistry}
+        disabled={!file || checkingRegistry}
+      >
+        <SearchCheck size={15} />
+        {checkingRegistry ? "Checking registry..." : "Check if already uploaded"}
+      </button>
+
+      {registryCheck ? (
+        <div className={registryCheck.exists ? "proof-error-row" : "proof-success-row"}>
+          {registryCheck.exists ? <AlertCircle size={15} /> : <CheckCircle2 size={15} />}
+          <span>
+            {registryCheck.exists
+              ? `Already found ${registryCheck.count} matching upload${registryCheck.count > 1 ? "s" : ""}.`
+              : "No matching upload found yet."}
+          </span>
+          {registryCheck.latestProof ? (
+            <Link href={routes.certificate(registryCheck.latestProof.id)}>View latest</Link>
+          ) : null}
+        </div>
+      ) : null}
 
       {error ? (
         <div className="proof-error-row">

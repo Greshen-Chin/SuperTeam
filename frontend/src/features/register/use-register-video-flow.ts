@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { registerProofOnChain } from "@/lib/blockchain-adapter";
 import { apiClient } from "@/lib/api-client";
+import type { ProofRegistryCheck } from "@/lib/api-client";
 import { extractThumbnail } from "@/lib/extract-thumbnail";
 import { useAuth } from "@/context/AuthContext";
 import type { Fingerprint, Proof } from "@/shared/schemas";
@@ -24,6 +25,8 @@ export function useRegisterVideoFlow() {
   const [title, setTitle] = useState("");
   const [creatorHandle, setCreatorHandle] = useState("");
   const [fingerprint, setFingerprint] = useState<Fingerprint | null>(null);
+  const [registryCheck, setRegistryCheck] = useState<ProofRegistryCheck | null>(null);
+  const [checkingRegistry, setCheckingRegistry] = useState(false);
   const [proof, setProof] = useState<Proof | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -35,6 +38,7 @@ export function useRegisterVideoFlow() {
   function selectFile(nextFile: File) {
     setFile(nextFile);
     setFingerprint(null);
+    setRegistryCheck(null);
     setProof(null);
     setError(null);
     setState("file_selected");
@@ -45,6 +49,8 @@ export function useRegisterVideoFlow() {
     setTitle("");
     setCreatorHandle("");
     setFingerprint(null);
+    setRegistryCheck(null);
+    setCheckingRegistry(false);
     setProof(null);
     setError(null);
     setState("idle");
@@ -59,6 +65,8 @@ export function useRegisterVideoFlow() {
       setState("fingerprinting");
       const nextFingerprint = await apiClient.createFingerprint(file);
       setFingerprint(nextFingerprint);
+      const existing = await apiClient.checkFingerprint(nextFingerprint, { limit: 10 }).catch(() => null);
+      setRegistryCheck(existing);
 
       setState("uploading");
       let ipfsVideoUri: string | undefined;
@@ -107,12 +115,32 @@ export function useRegisterVideoFlow() {
     }
   }
 
+  async function checkRegistry() {
+    if (!file) return;
+
+    try {
+      setCheckingRegistry(true);
+      setError(null);
+      const nextFingerprint = fingerprint ?? await apiClient.createFingerprint(file);
+      setFingerprint(nextFingerprint);
+      const existing = await apiClient.checkFingerprint(nextFingerprint, { limit: 10 });
+      setRegistryCheck(existing);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Could not check this file. Please try again.";
+      setError(msg);
+    } finally {
+      setCheckingRegistry(false);
+    }
+  }
+
   return {
     state,
     file,
     title,
     creatorHandle,
     fingerprint,
+    registryCheck,
+    checkingRegistry,
     proof,
     error,
     canCreateProof,
@@ -121,6 +149,7 @@ export function useRegisterVideoFlow() {
     setTitle,
     setCreatorHandle,
     createProof,
+    checkRegistry,
     reset
   };
 }

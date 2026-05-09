@@ -20,6 +20,13 @@ type ApiResponse<T> = {
   requestId: string;
 };
 
+export type ProofRegistryCheck = {
+  exists: boolean;
+  count: number;
+  latestProof: Proof | null;
+  proofs: Proof[];
+};
+
 const configuredApiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL;
 
 function getApiBaseUrl(): string | undefined {
@@ -177,6 +184,38 @@ export const apiClient = {
     } while (cursor);
 
     return proofs;
+  },
+
+  async checkFingerprint(fingerprint: Fingerprint, opts?: { limit?: number; signal?: AbortSignal }): Promise<ProofRegistryCheck> {
+    const apiBaseUrl = getApiBaseUrl();
+    if (apiBaseUrl) {
+      const params = new URLSearchParams({ sha256: fingerprint.sha256 });
+      if (opts?.limit) params.set("limit", String(opts.limit));
+      const response = await fetch(`${apiBaseUrl}/api/proofs/check?${params.toString()}`, {
+        cache: "no-store",
+        headers: authHeaders(),
+        signal: opts?.signal
+      });
+      return readApiResponse<ProofRegistryCheck>(response);
+    }
+    return { exists: false, count: 0, latestProof: null, proofs: [] };
+  },
+
+  async checkFileRegistration(file: File, opts?: { signal?: AbortSignal }): Promise<ProofRegistryCheck> {
+    const fingerprint = await createLocalFingerprint(file);
+    return this.checkFingerprint(fingerprint, { signal: opts?.signal });
+  },
+
+  async deleteProof(id: string): Promise<{ deleted: true; proof: Proof }> {
+    const apiBaseUrl = getApiBaseUrl();
+    if (apiBaseUrl) {
+      const response = await fetch(`${apiBaseUrl}/api/proofs/${encodeURIComponent(id)}`, {
+        method: "DELETE",
+        headers: authHeaders()
+      });
+      return readApiResponse<{ deleted: true; proof: Proof }>(response);
+    }
+    return { deleted: true, proof: { ...demoProof, id } };
   },
 
   async getProof(id: string, opts?: { signal?: AbortSignal }): Promise<Proof> {

@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { motion } from "framer-motion";
-import { Archive, ArrowUpRight, CalendarDays, FileVideo, MoreHorizontal, Search, ShieldCheck, SlidersHorizontal, UploadCloud } from "lucide-react";
+import { Archive, ArrowUpRight, CalendarDays, FileVideo, MoreHorizontal, Search, ShieldCheck, SlidersHorizontal, Trash2, UploadCloud } from "lucide-react";
 import { ArtifactBadge, GlowCard } from "@/components/ui/proof-artifacts";
 import { useAuth } from "@/context/AuthContext";
 import { apiClient } from "@/lib/api-client";
@@ -25,9 +25,11 @@ function isVaultSort(value: string): value is VaultSort {
 }
 
 export function VaultPage() {
-  const { isLoggedIn, publicAddress } = useAuth();
+  const { isLoggedIn, publicAddress, refreshJwt } = useAuth();
   const [proofs, setProofs] = useState<Proof[]>([]);
   const [loading, setLoading] = useState(false);
+  const [deletingIds, setDeletingIds] = useState<Set<string>>(() => new Set());
+  const [vaultError, setVaultError] = useState<string | null>(null);
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<VaultFilter>("all");
   const [sort, setSort] = useState<VaultSort>("newest");
@@ -80,6 +82,36 @@ export function VaultPage() {
 
   const listed = proofs.filter((proof) => proof.licenseFeeLamports > 0).length;
 
+  async function deleteProof(proof: Proof) {
+    if (!publicAddress) return;
+    const confirmed = window.confirm(`Delete "${proof.title}" from your vault? This removes the database record and cannot be undone.`);
+    if (!confirmed) return;
+
+    setVaultError(null);
+    setDeletingIds((current) => new Set(current).add(proof.id));
+    try {
+      try {
+        await apiClient.deleteProof(proof.id);
+      } catch (error) {
+        if (error instanceof Error && /sign in|bearer|token|auth/i.test(error.message)) {
+          await refreshJwt();
+          await apiClient.deleteProof(proof.id);
+        } else {
+          throw error;
+        }
+      }
+      setProofs((current) => current.filter((item) => item.id !== proof.id));
+    } catch (error) {
+      setVaultError(error instanceof Error ? error.message : "Failed to delete proof.");
+    } finally {
+      setDeletingIds((current) => {
+        const next = new Set(current);
+        next.delete(proof.id);
+        return next;
+      });
+    }
+  }
+
   return (
     <main className="vault-redesign-shell">
       <VaultSpaceCanvas />
@@ -128,6 +160,10 @@ export function VaultPage() {
         </div>
       </section>
 
+      {vaultError ? (
+        <div className="vault-inline-error" role="alert">{vaultError}</div>
+      ) : null}
+
       {loading ? (
         <div className="vault-redesign-grid" aria-busy>
           {Array.from({ length: 4 }, (_, index) => <div className="vault-skeleton-card" key={index} />)}
@@ -141,7 +177,13 @@ export function VaultPage() {
               key={proof.id}
               transition={{ delay: Math.min(index * 0.035, 0.18), duration: 0.18 }}
             >
-              <VaultProofCard accent={accents[index % accents.length] ?? "#14F195"} index={index} proof={proof} />
+              <VaultProofCard
+                accent={accents[index % accents.length] ?? "#14F195"}
+                deleting={deletingIds.has(proof.id)}
+                index={index}
+                onDelete={deleteProof}
+                proof={proof}
+              />
             </motion.div>
           ))}
         </section>
@@ -157,7 +199,19 @@ export function VaultPage() {
   );
 }
 
-function VaultProofCard({ accent, index, proof }: { accent: string; index: number; proof: Proof }) {
+function VaultProofCard({
+  accent,
+  deleting,
+  index,
+  onDelete,
+  proof
+}: {
+  accent: string;
+  deleting: boolean;
+  index: number;
+  onDelete: (proof: Proof) => void;
+  proof: Proof;
+}) {
   return (
     <GlowCard accent={accent} className="vault-proof-card">
       <div className="vault-card-media">
@@ -189,6 +243,15 @@ function VaultProofCard({ accent, index, proof }: { accent: string; index: numbe
             <ArrowUpRight size={14} />
           </Link>
           <Link href={routes.market}>License</Link>
+          <button
+            className="vault-delete-proof"
+            disabled={deleting}
+            onClick={() => onDelete(proof)}
+            type="button"
+          >
+            <Trash2 size={14} />
+            {deleting ? "Deleting" : "Delete"}
+          </button>
         </div>
       </div>
     </GlowCard>

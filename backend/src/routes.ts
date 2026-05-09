@@ -1,4 +1,4 @@
-import type { FastifyInstance } from "fastify";
+import type { FastifyInstance, FastifyRequest } from "fastify";
 import { z } from "zod";
 import { makeId } from "./fingerprint.js";
 import { matchFingerprint, computePhashBuckets } from "./matcher.js";
@@ -30,6 +30,10 @@ import { extractApiKey, verifyApiKey, checkMonthlyQuota } from "./api-keys.js";
 import type { ApiKey } from "./api-keys.js";
 
 const verifyBodySchema = z.object({ fingerprint: fingerprintSchema });
+const checkProofQuerySchema = z.object({
+  sha256: z.string().min(16),
+  limit: z.string().optional()
+});
 const airdropBodySchema = z.object({ address: z.string().min(32).max(44) });
 const anchorProofBodySchema = z.object({
   proofId: z.string().min(1),
@@ -63,6 +67,13 @@ function getBearerToken(request: Parameters<typeof fail>[1]) {
 function isAdmin(walletAddress: string | null): boolean {
   if (!walletAddress) return false;
   return config.vidchainAdminWallets.includes(walletAddress);
+}
+
+function getAuthenticatedWallet(request: FastifyRequest): string | null {
+  const token = getBearerToken(request);
+  if (!token) return null;
+  const payload = verifyAccessToken(token);
+  return typeof payload.wallet_address === "string" ? payload.wallet_address : null;
 }
 
 // ── API key helpers ───────────────────────────────────────────────────────────
@@ -196,6 +207,58 @@ export async function registerRoutes(app: FastifyInstance) {
       }
     }
   );
+
+  app.get<{ Querystring: { sha256?: string; limit?: string } }>("/api/proofs/check", {
+    config: { rateLimit: { max: 60, timeWindow: "1 minute" } }
+  }, async (request, reply) => {
+    const parsed = checkProofQuerySchema.safeParse(request.query);
+    if (!parsed.success) {
+      return fail(reply, request, 400, "INVALID_CHECK_QUERY", parsed.error.issues[0]?.message ?? "Valid sha256 query is required.");
+    }
+
+    try {
+      const limit = Math.min(Number(parsed.data.limit ?? 10), 50);
+      const matches = await createProofRepository(requirePool()).findManyBySha256(parsed.data.sha256, limit);
+      return ok(request, {
+        exists: matches.length > 0,
+        count: matches.length,
+        latestProof: matches[0] ?? null,
+        proofs: matches
+      });
+    } catch (error) {
+      return handleDbError(reply, request, error, "Failed to check proof.");
+    }
+  });
+
+  app.delete<{ Params: { id: string } }>("/api/proofs/:id", {
+    config: { rateLimit: { max: 20, timeWindow: "1 minute" } }
+  }, async (request, reply) => {
+    let creatorWallet: string | null = null;
+    try {
+      creatorWallet = getAuthenticatedWallet(request);
+    } catch (error) {
+      return handleDbError(reply, request, error, "Bearer token is invalid or expired.");
+    }
+
+    if (!creatorWallet) {
+      return fail(reply, request, 401, "AUTH_REQUIRED", "Sign in with your wallet before deleting a proof.");
+    }
+
+    try {
+      const proofRepo = createProofRepository(requirePool());
+      const existing = await proofRepo.findById(request.params.id);
+      if (!existing) return fail(reply, request, 404, "PROOF_NOT_FOUND", "Proof certificate was not found.");
+      if (existing.creatorWallet !== creatorWallet) {
+        return fail(reply, request, 403, "NOT_PROOF_OWNER", "Only the proof creator can delete this item.");
+      }
+
+      const deleted = await proofRepo.deleteByIdForCreator(request.params.id, creatorWallet);
+      if (!deleted) return fail(reply, request, 404, "PROOF_NOT_FOUND", "Proof certificate was not found.");
+      return ok(request, { deleted: true, proof: deleted });
+    } catch (error) {
+      return handleDbError(reply, request, error, "Failed to delete proof.");
+    }
+  });
 
   app.post("/api/proofs/verify", {
     config: {

@@ -55,6 +55,14 @@ export function createProofRepository(pool: Pool) {
       return result.rows[0] ? mapProof(result.rows[0]) : null;
     },
 
+    async findManyBySha256(sha256: string, limit = 10): Promise<Proof[]> {
+      const result = await pool.query(
+        "select * from proofs where sha256 = $1 order by registered_at desc limit $2",
+        [sha256, Math.min(limit, 50)]
+      );
+      return result.rows.map(mapProof);
+    },
+
     async findByCreatorWallet(
       wallet: string,
       opts: { cursor?: string; limit: number }
@@ -180,6 +188,14 @@ export function createProofRepository(pool: Pool) {
         [wallet]
       );
       return Number(result.rows[0]?.cnt ?? 0);
+    },
+
+    async deleteByIdForCreator(id: string, creatorWallet: string): Promise<Proof | null> {
+      const result = await pool.query(
+        "delete from proofs where id = $1 and creator_wallet = $2 returning *",
+        [id, creatorWallet]
+      );
+      return result.rows[0] ? mapProof(result.rows[0]) : null;
     }
   };
 }

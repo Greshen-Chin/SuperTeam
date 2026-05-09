@@ -2332,6 +2332,30 @@ textarea {
   width: 100%;
 }
 
+.proof-success-row {
+  align-items: center;
+  background: rgba(20, 241, 149, 0.1);
+  border: 1px solid rgba(20, 241, 149, 0.25);
+  border-radius: 10px;
+  color: #8ff7dc;
+  display: flex;
+  flex-wrap: wrap;
+  font-size: 13px;
+  gap: 8px;
+  margin-top: 10px;
+  padding: 10px 14px;
+  width: 100%;
+}
+
+.proof-error-row a,
+.proof-success-row a {
+  color: inherit;
+  font-weight: 800;
+  margin-left: auto;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
 .complete-card-link {
   align-items: center;
   color: var(--accent-purple, #9945ff) !important;
@@ -9895,6 +9919,7 @@ button[class*="bg-emerald"]:hover {
 }
 
 .vault-card-actions a,
+.vault-card-actions button,
 .vault-empty-state a {
   align-items: center;
   background: rgba(3, 12, 10, 0.72);
@@ -9911,16 +9936,50 @@ button[class*="bg-emerald"]:hover {
   white-space: nowrap;
 }
 
-.vault-card-actions a {
+.vault-card-actions a,
+.vault-card-actions button {
   flex: 0 0 auto;
 }
 
 .vault-card-actions a:hover,
+.vault-card-actions button:hover,
 .vault-empty-state a:hover {
   background: rgba(20,241,149,0.14);
   border-color: rgba(20,241,149,0.52);
   color: #fff;
   transform: translateY(-1px);
+}
+
+.vault-card-actions button {
+  cursor: pointer;
+}
+
+.vault-card-actions button:disabled {
+  cursor: wait;
+  opacity: 0.55;
+}
+
+.vault-delete-proof {
+  background: rgba(255, 107, 107, 0.08) !important;
+  border-color: rgba(255, 107, 107, 0.24) !important;
+  color: #ffb4b4 !important;
+}
+
+.vault-delete-proof:hover {
+  background: rgba(255, 107, 107, 0.16) !important;
+}
+
+.vault-inline-error {
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.25);
+  border-radius: 14px;
+  color: #fca5a5;
+  margin: 0 auto 1rem;
+  max-width: 1120px;
+  padding: 0.85rem 1rem;
+  position: relative;
+  width: min(100%, calc(100% - 2rem));
+  z-index: 2;
 }
 
 .vault-empty-state {
