@@ -52,10 +52,10 @@ export function MarketView() {
     let active = true;
     setLoading(true);
     Promise.all([
-      apiClient.listProofs(publicAddress, { limit: 50, signal: controller.signal }),
+      apiClient.listAllProofs(publicAddress, { limit: 50, signal: controller.signal }),
       apiClient.getLicensesByBuyer(publicAddress, { signal: controller.signal })
     ])
-      .then(async ([{ proofs: items }, bought]) => {
+      .then(async ([items, bought]) => {
         if (!active) return;
         setProofs(items);
         setLicenses(bought);
@@ -83,8 +83,8 @@ export function MarketView() {
     const controller = new AbortController();
     let active = true;
     setBrowseLoading(true);
-    apiClient.listForSaleProofs({ excludeWallet: publicAddress ?? undefined, limit: 50, signal: controller.signal })
-      .then(({ proofs: items }) => {
+    apiClient.listAllForSaleProofs({ excludeWallet: publicAddress ?? undefined, limit: 50, signal: controller.signal })
+      .then((items) => {
         if (active) setListed(items);
       })
       .catch((error: unknown) => {

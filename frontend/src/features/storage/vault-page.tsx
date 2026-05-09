@@ -40,8 +40,8 @@ export function VaultPage() {
     const controller = new AbortController();
     let active = true;
     setLoading(true);
-    apiClient.listProofs(publicAddress, { limit: 50, signal: controller.signal })
-      .then(({ proofs: items }) => {
+    apiClient.listAllProofs(publicAddress, { limit: 50, signal: controller.signal })
+      .then((items) => {
         if (active) setProofs(items);
       })
       .catch((error: unknown) => {

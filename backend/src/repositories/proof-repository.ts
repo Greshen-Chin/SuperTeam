@@ -4,12 +4,6 @@ import type { Proof, RegisterProofInput } from "../schemas.js";
 export function createProofRepository(pool: Pool) {
   return {
     async create(input: RegisterProofInput): Promise<Proof> {
-      const existing = await pool.query(
-        "select * from proofs where sha256 = $1 limit 1",
-        [input.fingerprint.sha256]
-      );
-      if (existing.rows[0]) return mapProof(existing.rows[0]);
-
       const id = input.id ?? `proof_${Date.now()}`;
       const phashBucket0 = computePhashBucket0(input.fingerprint.frameHashes);
       const result = await pool.query(
@@ -57,7 +51,7 @@ export function createProofRepository(pool: Pool) {
     },
 
     async findBySha256(sha256: string): Promise<Proof | null> {
-      const result = await pool.query("select * from proofs where sha256 = $1 limit 1", [sha256]);
+      const result = await pool.query("select * from proofs where sha256 = $1 order by registered_at desc limit 1", [sha256]);
       return result.rows[0] ? mapProof(result.rows[0]) : null;
     },
 

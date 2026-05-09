@@ -126,6 +126,27 @@ export const apiClient = {
     return { proofs: [], nextCursor: null };
   },
 
+  async listAllProofs(
+    creatorWallet: string,
+    opts?: { limit?: number; signal?: AbortSignal }
+  ): Promise<Proof[]> {
+    const proofs: Proof[] = [];
+    let cursor: string | undefined;
+    const pageLimit = opts?.limit ?? 50;
+
+    do {
+      const page = await this.listProofs(creatorWallet, {
+        cursor,
+        limit: pageLimit,
+        signal: opts?.signal
+      });
+      proofs.push(...page.proofs);
+      cursor = page.nextCursor ?? undefined;
+    } while (cursor);
+
+    return proofs;
+  },
+
   async listForSaleProofs(opts?: { excludeWallet?: string; cursor?: string; limit?: number; signal?: AbortSignal }): Promise<{ proofs: Proof[]; nextCursor: string | null }> {
     const apiBaseUrl = getApiBaseUrl();
     if (apiBaseUrl) {
@@ -137,6 +158,25 @@ export const apiClient = {
       return readApiResponse<{ proofs: Proof[]; nextCursor: string | null }>(response);
     }
     return { proofs: [], nextCursor: null };
+  },
+
+  async listAllForSaleProofs(opts?: { excludeWallet?: string; limit?: number; signal?: AbortSignal }): Promise<Proof[]> {
+    const proofs: Proof[] = [];
+    let cursor: string | undefined;
+    const pageLimit = opts?.limit ?? 50;
+
+    do {
+      const page = await this.listForSaleProofs({
+        excludeWallet: opts?.excludeWallet,
+        cursor,
+        limit: pageLimit,
+        signal: opts?.signal
+      });
+      proofs.push(...page.proofs);
+      cursor = page.nextCursor ?? undefined;
+    } while (cursor);
+
+    return proofs;
   },
 
   async getProof(id: string, opts?: { signal?: AbortSignal }): Promise<Proof> {

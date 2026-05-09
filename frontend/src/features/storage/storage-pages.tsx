@@ -173,8 +173,8 @@ export function NftStorageView() {
     const controller = new AbortController();
     let active = true;
     setLoading(true);
-    apiClient.listProofs(publicAddress, { limit: 3, signal: controller.signal })
-      .then(({ proofs: items }) => {
+    apiClient.listAllProofs(publicAddress, { limit: 50, signal: controller.signal })
+      .then((items) => {
         if (active) setProofs(items);
       })
       .catch((error: unknown) => {
@@ -242,8 +242,8 @@ export function VideoStorageView() {
     if (!publicAddress) return;
     const controller = new AbortController();
     let active = true;
-    apiClient.listProofs(publicAddress, { limit: 10, signal: controller.signal })
-      .then(({ proofs: items }) => {
+    apiClient.listAllProofs(publicAddress, { limit: 50, signal: controller.signal })
+      .then((items) => {
         if (active) setProofs(items);
       })
       .catch((error: unknown) => {

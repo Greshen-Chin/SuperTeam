@@ -29,8 +29,8 @@ export function CollectionView() {
     let active = true;
     setLoading(true);
     setError(null);
-    apiClient.listProofs(publicAddress, { limit: 50, signal: controller.signal })
-      .then(({ proofs: items }) => {
+    apiClient.listAllProofs(publicAddress, { limit: 50, signal: controller.signal })
+      .then((items) => {
         if (active) setProofs(items);
       })
       .catch((error: unknown) => {
