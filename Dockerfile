@@ -2,16 +2,17 @@ FROM node:20-slim
 
 WORKDIR /app/backend
 
-ENV NODE_ENV=production
 ENV HOST=0.0.0.0
 ENV PORT=7860
 
 COPY backend/package*.json ./
-RUN npm ci
+RUN npm ci --include=dev
 
 COPY backend/ ./
 RUN npm run build && npm prune --omit=dev
 
+ENV NODE_ENV=production
+
 EXPOSE 7860
 
-CMD ["sh", "-c", "npm run db:migrate && npm run start"]
+CMD ["sh", "-c", "node dist/scripts/migrate-db.js && node dist/server.js"]

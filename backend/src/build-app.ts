@@ -34,6 +34,30 @@ export async function buildApp(opts: { logger?: boolean | object } = {}): Promis
     genReqId: () => `req_${Date.now()}_${Math.random().toString(16).slice(2)}`
   });
 
+  app.addHook("onRequest", async (_request, reply) => {
+    void reply
+      .header("X-Content-Type-Options", "nosniff")
+      .header("X-Frame-Options", "DENY")
+      .header("Referrer-Policy", "no-referrer")
+      .header("Permissions-Policy", "camera=(), microphone=(), geolocation=(), payment=()")
+      .header("Cross-Origin-Resource-Policy", "same-site")
+      .header("Content-Security-Policy", "default-src 'none'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'");
+  });
+
+  app.setErrorHandler((error: unknown, request, reply) => {
+    const statusCode = getErrorStatusCode(error);
+    request.log.error({ err: error }, "request failed");
+    void reply.status(statusCode).send({
+      success: false,
+      error: {
+        code: getErrorCode(error),
+        message: statusCode < 500 ? getErrorMessage(error) : "Internal server error."
+      },
+      requestId: request.id,
+      timestamp: new Date().toISOString()
+    });
+  });
+
   app.addHook("onResponse", async (request, reply) => {
     request.log.info(
       {
@@ -72,7 +96,9 @@ export async function buildApp(opts: { logger?: boolean | object } = {}): Promis
     optionsSuccessStatus: 204
   });
   await app.register(rateLimit, {
-    global: false,
+    global: true,
+    max: 240,
+    timeWindow: "1 minute",
     keyGenerator: (req) => req.ip
   });
   await app.register(multipart, {
@@ -83,4 +109,23 @@ export async function buildApp(opts: { logger?: boolean | object } = {}): Promis
   await registerApiKeyRoutes(app);
 
   return app;
+}
+
+function getErrorStatusCode(error: unknown): number {
+  if (typeof error === "object" && error !== null && "statusCode" in error && typeof error.statusCode === "number") {
+    return error.statusCode >= 400 ? error.statusCode : 500;
+  }
+  return 500;
+}
+
+function getErrorCode(error: unknown): string {
+  if (typeof error === "object" && error !== null && "code" in error && typeof error.code === "string") {
+    return error.code;
+  }
+  return "INTERNAL";
+}
+
+function getErrorMessage(error: unknown): string {
+  if (error instanceof Error) return error.message;
+  return "Request failed.";
 }

@@ -41,6 +41,16 @@ const anchorProofBodySchema = z.object({
 
 const AIRDROP_THRESHOLD_LAMPORTS = 50_000_000; // 0.05 SOL
 const DISPUTE_FILING_FEE_LAMPORTS = 10_000_000; // 0.01 SOL
+const MAX_SAFE_FILENAME_LENGTH = 120;
+
+function sanitizeFileName(filename: string): string {
+  const safe = filename
+    .replace(/[^\w .()-]/g, "_")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, MAX_SAFE_FILENAME_LENGTH);
+  return safe || "vidchain-upload";
+}
 
 // ── Auth helpers ─────────────────────────────────────────────────────────────
 
@@ -698,7 +708,7 @@ export async function registerRoutes(app: FastifyInstance) {
 
     try {
       const buffer = await file.toBuffer();
-      const result = await uploadToIpfs(buffer, file.filename, file.mimetype);
+      const result = await uploadToIpfs(buffer, sanitizeFileName(file.filename), file.mimetype);
       return ok(request, result);
     } catch (err) {
       app.log.error({ err }, "IPFS upload failed");
