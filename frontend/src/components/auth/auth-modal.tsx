@@ -10,9 +10,10 @@ import { useAuth } from "@/context/AuthContext";
 interface AuthModalProps {
   open: boolean;
   onClose: () => void;
+  redirectTo?: string;
 }
 
-export function AuthModal({ open, onClose }: AuthModalProps) {
+export function AuthModal({ open, onClose, redirectTo = routes.register }: AuthModalProps) {
   const router = useRouter();
   const { loginWithGoogle, isLoggedIn, isLoading, error } = useAuth();
 
@@ -26,9 +27,9 @@ export function AuthModal({ open, onClose }: AuthModalProps) {
   useEffect(() => {
     if (isLoggedIn && open) {
       onClose();
-      router.push(routes.register);
+      router.push(redirectTo);
     }
-  }, [isLoggedIn, open, onClose, router]);
+  }, [isLoggedIn, open, onClose, redirectTo, router]);
 
   return (
     <AnimatePresence>

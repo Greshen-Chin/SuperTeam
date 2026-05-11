@@ -111,6 +111,22 @@ export function HomePage() {
     };
   }, [entryRevealed]);
 
+  useEffect(() => {
+    const root = document.querySelector(".home-cinematic");
+    if (!root) return;
+    const handlePointerMove = (event: globalThis.PointerEvent) => {
+      const target = event.target;
+      if (!(target instanceof Element)) return;
+      const element = target.closest<HTMLElement>("a,button");
+      if (!element || !root.contains(element)) return;
+      const rect = element.getBoundingClientRect();
+      element.style.setProperty("--home-flow-x", `${event.clientX - rect.left}px`);
+      element.style.setProperty("--home-flow-y", `${event.clientY - rect.top}px`);
+    };
+    root.addEventListener("pointermove", handlePointerMove as EventListener, { passive: true });
+    return () => root.removeEventListener("pointermove", handlePointerMove as EventListener);
+  }, []);
+
   const revealHome = useCallback(() => {
     setEntryRevealed(true);
     const stagedSections: SectionId[] = ["problem", "solution", "how", "phash", "dispute", "cta"];
@@ -174,13 +190,13 @@ function HeroSection() {
           <p className="mt-6 max-w-xl text-lg leading-8 text-zinc-300">A simple way for Indonesian creators to prove a video is theirs before it gets copied.</p>
           <div className="mt-9 flex flex-col gap-4 sm:flex-row">
             <MagneticLink
-              className="group inline-flex h-14 items-center justify-center gap-3 rounded-full bg-emerald-300 px-7 text-sm font-black text-black shadow-[0_0_70px_rgba(20,241,149,0.28)] transition hover:scale-105"
+              className="home-flow-action group inline-flex h-14 items-center justify-center gap-3 rounded-full bg-emerald-300 px-7 text-sm font-black text-black shadow-[0_0_70px_rgba(20,241,149,0.28)] transition hover:scale-105"
               href={routes.register}
             >
               Protect My Video
               <ArrowRight size={18} />
             </MagneticLink>
-            <MagneticLink className="inline-flex h-14 items-center justify-center gap-3 rounded-full border border-violet-300/45 px-7 text-sm font-black text-violet-100 transition hover:bg-white hover:text-black" href="#phash">
+            <MagneticLink className="home-flow-action inline-flex h-14 items-center justify-center gap-3 rounded-full border border-violet-300/45 px-7 text-sm font-black text-violet-100 transition hover:bg-white hover:text-black" href="#phash">
               See How It Works
               <ScanSearch size={18} />
             </MagneticLink>
@@ -836,13 +852,11 @@ function CTASection() {
           <p className="mx-auto mt-6 max-w-2xl text-lg text-zinc-300">10,000+ creators. One blockchain. Zero middlemen.</p>
           <div className="mt-10 flex flex-col justify-center gap-4 sm:flex-row">
             <MagneticLink
-              className="rounded-full bg-emerald-300 px-8 py-4 font-black text-black shadow-[0_0_70px_rgba(20,241,149,0.28)] transition"
+              className="home-final-try-link home-flow-action"
               href={routes.register}
             >
-              Protect My Video
-            </MagneticLink>
-            <MagneticLink className="rounded-full border border-violet-300/45 px-8 py-4 font-black text-violet-100 transition hover:bg-white hover:text-black" href={routes.verify}>
-              Read the Docs
+              Try it now
+              <ArrowRight size={18} />
             </MagneticLink>
           </div>
         </ScrollReveal>
@@ -1026,6 +1040,9 @@ function MagneticLink({
     const rect = element.getBoundingClientRect();
     const x = event.clientX - (rect.left + rect.width / 2);
     const y = event.clientY - (rect.top + rect.height / 2);
+    element.style.setProperty("--home-flow-x", `${event.clientX - rect.left}px`);
+    element.style.setProperty("--home-flow-y", `${event.clientY - rect.top}px`);
+    if (window.matchMedia("(max-width: 768px)").matches) return;
     element.style.transform = `translate3d(${x * 0.3}px, ${y * 0.3}px, 0)`;
   };
   const reset = () => {
@@ -1034,7 +1051,7 @@ function MagneticLink({
   };
   return (
     <Link className={className} href={href} onPointerLeave={reset} onPointerMove={handlePointerMove} ref={ref}>
-      {children}
+      <span className="home-flow-content">{children}</span>
     </Link>
   );
 }

@@ -164,7 +164,7 @@ export function EntryExperience({ onReveal }: EntryExperienceProps) {
 
           <AnimatePresence>
             {promptVisible && eyesVisible ? (
-              <motion.div animate={{ opacity: [0.25, 0.4, 0.25] }} className="absolute left-1/2 top-[calc(50%+72px)] -translate-x-1/2 text-center font-mono text-[13px] uppercase tracking-[0.25em] text-white/35" exit={{ opacity: 0 }} initial={{ opacity: 0 }} transition={{ duration: 1.2, repeat: Infinity }}>
+              <motion.div animate={{ opacity: [0.48, 0.86, 0.48] }} className="home-entry-prompt absolute left-1/2 top-[calc(50%+72px)] -translate-x-1/2 text-center font-mono text-[13px] uppercase tracking-[0.25em] text-white/70" exit={{ opacity: 0 }} initial={{ opacity: 0 }} transition={{ duration: 1.2, repeat: Infinity }}>
                 click anywhere to see
                 <motion.div animate={{ opacity: [0.2, 0.55, 0.2], y: [0, 7, 0] }} className="mx-auto mt-5 h-3 w-3 rotate-45 border-b border-r border-white/30" transition={{ duration: 2, repeat: Infinity }} />
               </motion.div>

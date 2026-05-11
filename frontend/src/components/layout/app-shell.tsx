@@ -1,15 +1,15 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import dynamic from "next/dynamic";
 import { ProfileModal } from "@/features/profile/profile-modal";
 import { useCreatorProfile } from "@/lib/use-creator-profile";
 import type { ReactNode } from "react";
-import { usePathname } from "next/navigation";
-import { Archive, Search, Tag, UploadCloud, Wallet } from "lucide-react";
+import { usePathname, useRouter } from "next/navigation";
+import { Archive, LockKeyhole, Search, Tag, UploadCloud, Wallet } from "lucide-react";
 import { routes } from "@/lib/routes";
-import { cn, formatWallet } from "@/lib/utils";
+import { cn } from "@/lib/utils";
 import { useAuth } from "@/context/AuthContext";
 
 const AuthModal = dynamic(
@@ -36,18 +36,43 @@ const homeNavItems = [
   { href: "#cta", label: "Try" }
 ];
 
+const protectedRoutes = [
+  routes.register,
+  routes.check,
+  routes.verify,
+  routes.videoStorage,
+  routes.nftStorage,
+  routes.collection,
+  routes.market,
+  routes.wallet,
+  routes.users,
+  routes.dashboard
+];
+
+function isProtectedPath(pathname: string) {
+  return protectedRoutes.some((route) => pathname === route || pathname.startsWith(`${route}/`));
+}
+
 export function AppShell({ children }: AppShellProps) {
   const pathname = usePathname();
+  const router = useRouter();
   const isHome = pathname === routes.home;
-  const { isLoggedIn, publicAddress } = useAuth();
+  const { isLoggedIn, isLoading } = useAuth();
   const [authOpen, setAuthOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
   const { profile, hasName } = useCreatorProfile();
   const launchHref = routes.register;
+  const protectedPath = isProtectedPath(pathname);
+  const locked = protectedPath && !isLoading && !isLoggedIn;
+
+  useEffect(() => {
+    if (!locked) return;
+    setAuthOpen(true);
+  }, [locked]);
 
   return (
     <div className="min-h-screen bg-[var(--bg)] text-white">
-      <AuthModal open={authOpen} onClose={() => setAuthOpen(false)} />
+      <AuthModal open={authOpen} onClose={() => setAuthOpen(false)} redirectTo={protectedPath ? pathname : launchHref} />
       <ProfileModal open={profileOpen} onClose={() => setProfileOpen(false)} />
       <header className={cn("navbar", isHome && "home-navbar")}>
         <Link className="nav-logo" href={routes.home}>
@@ -85,22 +110,19 @@ export function AppShell({ children }: AppShellProps) {
                 Launch app
               </button>
             )
-          ) : (
-            <>
-              {publicAddress ? (
-                <button className="wallet-pill" type="button" aria-label={`Connected wallet ${publicAddress}`} onClick={() => setProfileOpen(true)}>
-                  <span className="wallet-dot" />
-                  {formatWallet(publicAddress)}
-                </button>
-              ) : null}
-            </>
-          )}
+          ) : null}
           <button
             className={hasName ? "nav-avatar nav-avatar-has-profile" : "nav-avatar"}
             type="button"
-            aria-label="Open creator profile"
-            title={hasName ? `Profile: ${profile.channelName}` : "Set up creator profile"}
-            onClick={() => setProfileOpen(true)}
+            aria-label={isLoggedIn ? "Open creator profile" : "Login to edit profile"}
+            title={isLoggedIn ? (hasName ? `Profile: ${profile.channelName}` : "Set up creator profile") : "Login to edit profile"}
+            onClick={() => {
+              if (isLoggedIn) {
+                setProfileOpen(true);
+                return;
+              }
+              setAuthOpen(true);
+            }}
           >
             <span className="nav-avatar-inner">
               {hasName
@@ -111,9 +133,44 @@ export function AppShell({ children }: AppShellProps) {
           </button>
         </div>
       </header>
+      {isHome ? (
+        <nav className="home-mobile-dock" aria-label="Landing sections mobile">
+          {homeNavItems.map((item) => (
+            <Link className="home-mobile-dock-item" href={item.href} key={item.href}>
+              <span>{item.label}</span>
+            </Link>
+          ))}
+        </nav>
+      ) : null}
 
-      <main>{children}</main>
+      <main>
+        {locked ? (
+          <LockedAppSurface
+            onBackHome={() => router.push(routes.home)}
+            onLogin={() => setAuthOpen(true)}
+          />
+        ) : children}
+      </main>
     </div>
+  );
+}
+
+function LockedAppSurface({ onBackHome, onLogin }: { onBackHome: () => void; onLogin: () => void }) {
+  return (
+    <section className="locked-app-surface">
+      <div className="locked-app-card">
+        <span className="locked-app-icon">
+          <LockKeyhole size={26} />
+        </span>
+        <p className="locked-app-kicker">PRIVATE WORKSPACE</p>
+        <h1>Login dulu untuk buka VidChain.</h1>
+        <p>Upload, Check, Vault, dan Market hanya bisa diakses setelah wallet kamu terhubung.</p>
+        <div className="locked-app-actions">
+          <button type="button" onClick={onLogin}>Continue login</button>
+          <button type="button" onClick={onBackHome}>Back home</button>
+        </div>
+      </div>
+    </section>
   );
 }
 
