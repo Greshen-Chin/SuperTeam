@@ -18,7 +18,7 @@ export function OptimizedBackgroundCanvas({ activeSection }: OptimizedBackground
     const canvas = canvasRef.current;
     if (!canvas) return;
     const profile = createVisualProfile();
-    if (profile.maxParticles <= 40) {
+    if (profile.maxParticles < 48) {
       canvas.style.display = "none";
       return;
     }

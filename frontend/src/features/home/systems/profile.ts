@@ -55,7 +55,7 @@ export function createVisualProfile(): VisualProfile {
       flashlightRadius: 100,
       heroIcons: 10,
       heroMouseRepulsion: false,
-      maxParticles: 40,
+      maxParticles: 72,
       phashBg: "canvas",
       problemBg: "css",
       royaltiesBg: "css",

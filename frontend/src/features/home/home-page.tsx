@@ -141,7 +141,7 @@ export function HomePage() {
     <main className={cn("home-cinematic relative overflow-hidden bg-[#0A0A0F] text-white", !entryRevealed && "home-entry-locked", entryRevealed && "home-entry-revealed")}>
       <DepthParallax />
       <OuterSpaceDetails />
-      {entryRevealed ? <OptimizedBackgroundCanvas activeSection="hero" /> : null}
+      {entryRevealed ? <OptimizedBackgroundCanvas activeSection={activeSection} /> : null}
       {entryRevealed ? <CursorTrailCanvas /> : null}
       {entryRevealed ? <LightBulbCursor /> : null}
       {entryRevealed ? <ProgressRail activeSection={activeSection} /> : null}
@@ -508,23 +508,34 @@ function HowSection() {
 
 function PHashSection() {
   const [scanned, setScanned] = useState(false);
+  const runScan = () => {
+    setScanned(false);
+    window.requestAnimationFrame(() => setScanned(true));
+  };
 
   return (
     <StorySection eyebrow="Copy check" id="phash" tone="cyan" title="Even edited copies can still be found.">
       <CursorGlow className="relative overflow-hidden rounded-[2rem] border border-cyan-200/15 bg-black/70 p-5">
         <MatrixRain />
-        <div className="relative grid gap-5 md:grid-cols-2">
-          {["Original Video", "Stolen Re-encoded Video"].map((label, index) => (
-            <CursorGlow className="relative overflow-hidden rounded-3xl border border-white/10 bg-white/[0.04] p-5" key={label}>
-              <div className="grid h-56 place-items-center rounded-2xl bg-[radial-gradient(circle,rgba(153,69,255,0.28),rgba(2,6,23,0.9))]">
-                <FileVideo className={index === 0 ? "text-emerald-100" : "text-violet-200"} size={58} />
-              </div>
-              <h3 className="mt-5 text-2xl font-black">{label}</h3>
-              <p className="mt-2 font-mono text-xs uppercase tracking-[0.2em] text-zinc-500">{scanned ? `File ${index === 0 ? "OK" : "CHANGED"} / Visual match found` : "Waiting for scan"}</p>
-              {scanned ? <motion.div animate={{ x: ["-20%", "120%"] }} className="phash-normal-scan-line absolute left-0 top-0 h-full w-16" transition={{ duration: 0.9, repeat: 2 }} /> : null}
-            </CursorGlow>
-          ))}
-          <button className="phash-scan-button absolute left-1/2 top-1/2 z-10 grid h-24 w-24 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full border bg-black text-sm font-black uppercase tracking-[0.18em] transition hover:scale-105" onClick={() => setScanned(true)} type="button">
+        <div className="phash-scan-stage relative">
+          <div className="phash-card-grid grid gap-5 md:grid-cols-2">
+            {["Original Video", "Stolen Re-encoded Video"].map((label, index) => (
+              <CursorGlow className="relative overflow-hidden rounded-3xl border border-white/10 bg-white/[0.04] p-5" key={label}>
+                <div className="grid h-56 place-items-center rounded-2xl bg-[radial-gradient(circle,rgba(153,69,255,0.28),rgba(2,6,23,0.9))]">
+                  <FileVideo className={index === 0 ? "text-emerald-100" : "text-violet-200"} size={58} />
+                </div>
+                <h3 className="mt-5 text-2xl font-black">{label}</h3>
+                <p className="mt-2 font-mono text-xs uppercase tracking-[0.2em] text-zinc-500">{scanned ? `File ${index === 0 ? "OK" : "CHANGED"} / Visual match found` : "Waiting for scan"}</p>
+                {scanned ? <motion.div animate={{ x: ["-20%", "120%"] }} className="phash-normal-scan-line absolute left-0 top-0 h-full w-16" transition={{ duration: 0.9, repeat: 2 }} /> : null}
+              </CursorGlow>
+            ))}
+          </div>
+          <button
+            aria-pressed={scanned}
+            className="phash-scan-button grid place-items-center rounded-full border bg-black text-sm font-black uppercase tracking-[0.18em] transition"
+            onClick={runScan}
+            type="button"
+          >
             Scan
           </button>
         </div>

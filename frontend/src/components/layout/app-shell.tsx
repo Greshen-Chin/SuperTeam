@@ -141,7 +141,20 @@ export function AppShell({ children }: AppShellProps) {
             </Link>
           ))}
         </nav>
-      ) : null}
+      ) : (
+        <nav className="app-mobile-dock" aria-label="App navigation mobile">
+          {navItems.map((item) => {
+            const Icon = item.icon;
+
+            return (
+              <Link className={cn("app-mobile-dock-item", pathname === item.href && "active")} href={item.href} key={item.href}>
+                <Icon size={16} />
+                <span>{item.label}</span>
+              </Link>
+            );
+          })}
+        </nav>
+      )}
 
       <main>
         {locked ? (
